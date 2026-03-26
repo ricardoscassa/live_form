@@ -3248,6 +3248,26 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 this.querySelector('.toggle-label').textContent = appState.ecsQuickEntryMode ? 'Search' : 'List';
                 saveDataToStorage();
                 if (appState.ecsQuickEntryMode) {
+                    // Sync confirmedCodes with any codes that already have a saved
+                    // status or comment (e.g. assigned while in List view), so they
+                    // appear as confirmed rows when switching to Search view.
+                    const roomName = Object.keys(appState.roomCodes)[appState.currentCodeRoomIndex];
+                    const allCodesForRoom = appState.roomCodes[roomName] || [];
+                    if (!appState.ecsQuickEntryState) appState.ecsQuickEntryState = {};
+                    if (!appState.ecsQuickEntryState[roomName]) {
+                        appState.ecsQuickEntryState[roomName] = { confirmedCodes: [] };
+                    }
+                    const state = appState.ecsQuickEntryState[roomName];
+                    const alreadyConfirmed = new Set(state.confirmedCodes);
+                    allCodesForRoom.forEach(code => {
+                        if (alreadyConfirmed.has(code)) return; // already in list
+                        const uid = `${roomName}-${code}`;
+                        const hasStatus = appState.checkData[uid] !== null && appState.checkData[uid] !== undefined;
+                        const hasComment = !!(appState.codeSpecificComments && appState.codeSpecificComments[uid]);
+                        if (hasStatus || hasComment) {
+                            state.confirmedCodes.push(code);
+                        }
+                    });
                     renderEcsQuickEntryMode();
                 } else {
                     generateCodeCheckItems();
@@ -5092,6 +5112,20 @@ barcodeWrapper.appendChild(barcodeInput);
 
             const { roomName, state } = getEcsQuickEntryState();
             const allCodesForRoom = appState.roomCodes[roomName] || [];
+
+            // ── Sync: ensure any code that has a saved status or comment is
+            //    already in confirmedCodes, even if it was set via List view.
+            const alreadyConfirmed = new Set(state.confirmedCodes);
+            allCodesForRoom.forEach(code => {
+                if (alreadyConfirmed.has(code)) return;
+                const uid = `${roomName}-${code}`;
+                const hasStatus = appState.checkData[uid] !== null && appState.checkData[uid] !== undefined;
+                const hasComment = !!(appState.codeSpecificComments && appState.codeSpecificComments[uid]);
+                if (hasStatus || hasComment) {
+                    state.confirmedCodes.push(code);
+                    alreadyConfirmed.add(code);
+                }
+            });
 
             if (allCodesForRoom.length === 0) {
                 const empty = document.createElement('div');
