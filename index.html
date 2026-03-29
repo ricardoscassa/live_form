@@ -5602,6 +5602,17 @@ barcodeWrapper.appendChild(barcodeInput);
                     statusButton.textContent = statusText;
                     statusButton.classList.add('selected');
                 }
+                // Show camera button immediately on the row — works for both list and search view
+                const rowEl = statusButton ? statusButton.closest('.grid-row, .ecs-quick-entry-row') : null;
+                if (rowEl) {
+                    const isSearchView = rowEl.classList.contains('ecs-quick-entry-row');
+                    const ecsCodeEl = isSearchView
+                        ? rowEl.querySelector('.ecs-confirmed-code')
+                        : rowEl.querySelector('.grid-cell.code-cell');
+                    const ecsCode = ecsCodeEl ? ecsCodeEl.textContent.trim() : codeId;
+                    const roomName = Object.keys(appState.roomCodes || {})[appState.currentCodeRoomIndex] || '';
+                    addCameraButtonToRow(rowEl, codeId, roomName, ecsCode, isSearchView);
+                }
             }
 
             if (statusOptionsPanel) statusOptionsPanel.classList.remove('active');
@@ -5700,6 +5711,17 @@ barcodeWrapper.appendChild(barcodeInput);
                     customInput.classList.add('show');
                     customInput.focus();
                 }
+                // Show camera button immediately — it will persist once text is typed
+                const rowElC = commentButton ? commentButton.closest('.grid-row, .ecs-quick-entry-row') : null;
+                if (rowElC) {
+                    const isSearchViewC = rowElC.classList.contains('ecs-quick-entry-row');
+                    const ecsCodeElC = isSearchViewC
+                        ? rowElC.querySelector('.ecs-confirmed-code')
+                        : rowElC.querySelector('.grid-cell.code-cell');
+                    const ecsCodeC = ecsCodeElC ? ecsCodeElC.textContent.trim() : codeId;
+                    const roomNameC = Object.keys(appState.roomCodes || {})[appState.currentCodeRoomIndex] || '';
+                    addCameraButtonToRow(rowElC, codeId, roomNameC, ecsCodeC, isSearchViewC);
+                }
             } else {
                 if (commentButton) {
                     commentButton.textContent = commentText;
@@ -5710,6 +5732,17 @@ barcodeWrapper.appendChild(barcodeInput);
                     customInput.value = '';
                 }
                 appState.codeSpecificComments[codeId] = commentText;
+                // Show camera button immediately on the row — works for both list and search view
+                const rowElC = commentButton ? commentButton.closest('.grid-row, .ecs-quick-entry-row') : null;
+                if (rowElC) {
+                    const isSearchViewC = rowElC.classList.contains('ecs-quick-entry-row');
+                    const ecsCodeElC = isSearchViewC
+                        ? rowElC.querySelector('.ecs-confirmed-code')
+                        : rowElC.querySelector('.grid-cell.code-cell');
+                    const ecsCodeC = ecsCodeElC ? ecsCodeElC.textContent.trim() : codeId;
+                    const roomNameC = Object.keys(appState.roomCodes || {})[appState.currentCodeRoomIndex] || '';
+                    addCameraButtonToRow(rowElC, codeId, roomNameC, ecsCodeC, isSearchViewC);
+                }
                 saveDataToStorage();
             }
 
