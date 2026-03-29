@@ -2286,6 +2286,14 @@
         @media (max-width: 700px) {
             #ecsRemainingBadge.visible { display: flex; }
         }
+        /* ── Always hide ECS badge when any photo overlay is open ───────── */
+        /* Covers: photos grid modal AND individual fullscreen view          */
+        .photo-modal.active ~ * #ecsRemainingBadge,
+        .photo-fullscreen.active ~ * #ecsRemainingBadge,
+        body:has(.photo-modal.active) #ecsRemainingBadge,
+        body:has(.photo-fullscreen.active) #ecsRemainingBadge {
+            display: none !important;
+        }
 
         /* ── Room Done pill shown in dropdown list ────────────────────── */
         .room-done-pill {
@@ -7403,18 +7411,24 @@ function renderFlexBarcodeRows() {
         const fs = document.getElementById('photoFullscreen');
         fs.classList.remove('active');
         document.getElementById('photoFullscreenImg').src = '';
-        // Restore ECS badge visibility
+        // Only restore ECS badge if the photo modal is also closed
+        var photoModal = document.getElementById('photoModal');
         var ecsBadge = document.getElementById('ecsRemainingBadge');
-        if (ecsBadge) ecsBadge.style.display = '';
+        if (ecsBadge && (!photoModal || !photoModal.classList.contains('active'))) {
+            ecsBadge.style.display = '';
+        }
     });
     document.getElementById('photoFullscreen').addEventListener('click', (e) => {
         // Close when tapping the black background (not the image itself)
         if (e.target === document.getElementById('photoFullscreen')) {
             document.getElementById('photoFullscreen').classList.remove('active');
             document.getElementById('photoFullscreenImg').src = '';
-            // Restore ECS badge visibility
+            // Only restore ECS badge if the photo modal is also closed
+            var photoModal = document.getElementById('photoModal');
             var ecsBadge = document.getElementById('ecsRemainingBadge');
-            if (ecsBadge) ecsBadge.style.display = '';
+            if (ecsBadge && (!photoModal || !photoModal.classList.contains('active'))) {
+                ecsBadge.style.display = '';
+            }
         }
     });
 
