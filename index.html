@@ -2287,7 +2287,9 @@
             #ecsRemainingBadge.visible { display: flex; }
         }
         /* ── Always hide ECS badge when any photo overlay is open ───────── */
-        /* Covers: photos grid modal AND individual fullscreen view          */
+        /* Covers: photos grid modal AND individual fullscreen view.         */
+        /* Sibling rules: fallback for browsers without :has() support.     */
+        /* body:has() rules: modern, reliable, position-independent.        */
         .photo-modal.active ~ * #ecsRemainingBadge,
         .photo-fullscreen.active ~ * #ecsRemainingBadge,
         body:has(.photo-modal.active) #ecsRemainingBadge,
@@ -5326,10 +5328,14 @@ barcodeWrapper.appendChild(barcodeInput);
 
             row.appendChild(controlsRow);
 
-            // ── Camera button (icon only) — always shown on confirmed rows ──
+            // ── Camera button (icon only) — only shown if this code already has status or comment ──
             // We call addCameraButtonToRow but pass a flag to use icon-only style.
             // Use setTimeout so the row is in the DOM before we query it.
-            setTimeout(() => addCameraButtonToRow(row, uniqueCodeId, roomName, code, true), 0);
+            const hasStatus = appState.checkData[uniqueCodeId] !== null && appState.checkData[uniqueCodeId] !== undefined;
+            const hasComment = !!(appState.codeSpecificComments && appState.codeSpecificComments[uniqueCodeId]);
+            if (hasStatus || hasComment) {
+                setTimeout(() => addCameraButtonToRow(row, uniqueCodeId, roomName, code, true), 0);
+            }
 
             return row;
         }
@@ -5580,6 +5586,16 @@ barcodeWrapper.appendChild(barcodeInput);
                     statusButton.textContent = 'Select Status';
                     statusButton.classList.remove('selected');
                 }
+                // Remove camera button if no status AND no comment remain
+                const hasComment = !!(appState.codeSpecificComments && appState.codeSpecificComments[codeId]);
+                if (!hasComment) {
+                    // Find the row containing this status button and remove its camera-row
+                    const rowEl = statusButton ? statusButton.closest('.grid-row, .ecs-quick-entry-row') : null;
+                    if (rowEl) {
+                        const camRow = rowEl.querySelector('.camera-row');
+                        if (camRow) camRow.remove();
+                    }
+                }
             } else {
                 appState.checkData[codeId] = parseInt(statusIndex);
                 if (statusButton) {
@@ -5662,6 +5678,15 @@ barcodeWrapper.appendChild(barcodeInput);
                 }
                 if (optionsPanel) optionsPanel.classList.remove('active');
                 refreshClearOption(optionsPanel, false);
+                // Remove camera button if no status AND no comment remain
+                const hasStatus = appState.checkData[codeId] !== null && appState.checkData[codeId] !== undefined;
+                if (!hasStatus) {
+                    const rowEl = commentButton ? commentButton.closest('.grid-row, .ecs-quick-entry-row') : null;
+                    if (rowEl) {
+                        const camRow = rowEl.querySelector('.camera-row');
+                        if (camRow) camRow.remove();
+                    }
+                }
                 saveDataToStorage();
                 return;
             }
@@ -7319,8 +7344,10 @@ function renderFlexBarcodeRows() {
                         fileInput.value = '';
                     },
                     () => {
-                        // onRetake callback — just reset input
+                        // onRetake callback — reset input then immediately reopen camera
                         fileInput.value = '';
+                        // Small delay so the stamp editor has fully closed first
+                        setTimeout(() => fileInput.click(), 80);
                     }
                 );
             };
@@ -7671,8 +7698,10 @@ self.addEventListener('fetch', e => {
         // Initial preview render
         renderStampPreview(canvas, lines, rawDataUrl);
 
+        // Save scroll position so closing the editor returns user to same spot
+        _stampEditorState._savedScrollY = window.scrollY;
+
         modal.classList.add('active');
-        window.scrollTo(0, 0);
     }
 
     /**
@@ -7734,7 +7763,11 @@ self.addEventListener('fetch', e => {
 
     function closeStampEditor() {
         document.getElementById('stampEditorModal').classList.remove('active');
+        // Restore the scroll position the user was at before the editor opened
+        const savedY = _stampEditorState && _stampEditorState._savedScrollY != null
+            ? _stampEditorState._savedScrollY : null;
         _stampEditorState = null;
+        if (savedY !== null) window.scrollTo({ top: savedY, behavior: 'instant' });
     }
 
     // Save button
