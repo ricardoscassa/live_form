@@ -740,6 +740,12 @@ Block B&#9;Room 10&#9;2HLF0001ST0000"></textarea>
 
 <script>
 // ─────────────────────────────────────────────────────────────
+//  CONFIGURATION
+// ─────────────────────────────────────────────────────────────
+// Power Automate flow URL — pre-set so no manual entry needed.
+// Update this if the flow is recreated and the URL changes.
+const DEFAULT_FLOW_URL = ''
+// ─────────────────────────────────────────────────────────────
 //  HARDCODED OPTIONS
 // ─────────────────────────────────────────────────────────────
 const OPTS = [
@@ -824,8 +830,8 @@ function getReportEmail() {
 function getFlowUrl() {
     try {
         const s = JSON.parse(localStorage.getItem('bi_settings') || '{}');
-        return (s.flowUrl || '').trim();
-    } catch(e) { return ''; }
+        return (s.flowUrl || '').trim() || DEFAULT_FLOW_URL;
+    } catch(e) { return DEFAULT_FLOW_URL; }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -962,6 +968,7 @@ function parseAndGenerate() {
     // Embed report email and flow URL into payload so tablet can use them
     const email = getReportEmail();
     if (email) compact._email = email;
+    // Always embed the flow URL (from settings or the hardcoded default)
     const flowUrl = getFlowUrl();
     if (flowUrl) compact._flow = flowUrl;
 
@@ -1584,7 +1591,7 @@ async function submitBuildingComplete() {
     }
 
     // ── Try Power Automate flow first ────────────────────────────────────────
-    const flowUrl = S.data._flow || '';
+    const flowUrl = (S.data._flow || '').trim() || DEFAULT_FLOW_URL;
     const btn = document.getElementById('submitBldBtnInner');
 
     if (flowUrl) {
