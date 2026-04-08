@@ -298,6 +298,29 @@ textarea, input[type=text], input[type=email] { -webkit-user-select: text; user-
 .status-option:hover, .status-option:active { background-color: #f0f0f0; }
 .status-option.clear { color: #dc3545; font-style: italic; font-size: 13px; }
 
+/* ── Sync status indicator ── */
+.sync-status {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-top: 12px;
+}
+.sync-status.syncing  { display: flex; background: #e8f4fd; color: #0077cc; }
+.sync-status.success  { display: flex; background: #e8f5e9; color: #2e7d32; }
+.sync-status.error    { display: flex; background: #fff3f3; color: #c62828; }
+.sync-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    background: currentColor;
+}
+.sync-status.syncing .sync-dot {
+    animation: pulse 1s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
 /* ── User-added ECS codes ── */
 .user-added-badge {
     display: inline-block;
@@ -492,7 +515,17 @@ textarea, input[type=text], input[type=email] { -webkit-user-select: text; user-
         </label>
         <input type="email" id="reportEmail" class="text-input" placeholder="e.g. manager@company.com"
                oninput="saveSettings()" autocomplete="email" inputmode="email">
-        <div class="help-text">CSV inspection results from the tablet will be emailed here. Also used to send the share link.</div>
+        <div class="help-text">Used to send the share link and receive CSV results.</div>
+      </div>
+      <div style="margin-bottom:4px">
+        <label class="room-input-section" style="margin-bottom:6px;">
+          <span style="font-weight:600;color:#555;font-size:1rem;">Power Automate Flow URL</span>
+          <span style="font-weight:400;color:#888;font-size:0.85rem;margin-left:8px;">(optional)</span>
+        </label>
+        <input type="text" id="flowUrl" class="text-input"
+               placeholder="https://prod-xx.westeurope.logic.azure.com/..."
+               oninput="saveSettings()" autocomplete="off" spellcheck="false">
+        <div class="help-text">Paste the HTTP trigger URL from your Power Automate flow. When set, completed inspections sync directly to SharePoint instead of email only.</div>
       </div>
     </div>
 
@@ -624,10 +657,16 @@ Block B&#9;Room 10&#9;2HLF0001ST0000"></textarea>
 
       <!-- Building complete button — shown only when all ECS verified -->
       <div id="submitBldBtn" style="display:none;margin-top:16px;">
-        <button class="button success" style="width:100%;font-size:1.1rem;padding:18px;
-          background:linear-gradient(135deg,#28a745,#20c997);" onclick="submitBuildingComplete()">
-          Building Complete — Send Report
+        <button class="button success" id="submitBldBtnInner"
+          style="width:100%;font-size:1.1rem;padding:18px;
+          background:linear-gradient(135deg,#28a745,#20c997);"
+          onclick="submitBuildingComplete()">
+          Building Complete — Submit to SharePoint
         </button>
+        <div id="syncStatus" class="sync-status">
+          <div class="sync-dot"></div>
+          <span id="syncMsg">Syncing...</span>
+        </div>
       </div>
 
       <div class="action-buttons">
@@ -759,14 +798,19 @@ const S = {
 //  SETTINGS (email address, persisted)
 // ─────────────────────────────────────────────────────────────
 function saveSettings() {
-    const email = document.getElementById('reportEmail').value.trim();
-    localStorage.setItem('bi_settings', JSON.stringify({ email }));
+    const email   = document.getElementById('reportEmail').value.trim();
+    const flowUrl = document.getElementById('flowUrl')
+                  ? document.getElementById('flowUrl').value.trim() : '';
+    localStorage.setItem('bi_settings', JSON.stringify({ email, flowUrl }));
 }
 
 function loadSettings() {
     try {
         const s = JSON.parse(localStorage.getItem('bi_settings') || '{}');
-        if (s.email) document.getElementById('reportEmail').value = s.email;
+        if (s.email && document.getElementById('reportEmail'))
+            document.getElementById('reportEmail').value = s.email;
+        if (s.flowUrl && document.getElementById('flowUrl'))
+            document.getElementById('flowUrl').value = s.flowUrl;
     } catch(e) {}
 }
 
@@ -774,6 +818,13 @@ function getReportEmail() {
     try {
         const s = JSON.parse(localStorage.getItem('bi_settings') || '{}');
         return (s.email || '').trim();
+    } catch(e) { return ''; }
+}
+
+function getFlowUrl() {
+    try {
+        const s = JSON.parse(localStorage.getItem('bi_settings') || '{}');
+        return (s.flowUrl || '').trim();
     } catch(e) { return ''; }
 }
 
@@ -908,9 +959,11 @@ function parseAndGenerate() {
 
     const compact = rowsToCompact(rows);
 
-    // Embed report email into payload so tablet knows where to send results
+    // Embed report email and flow URL into payload so tablet can use them
     const email = getReportEmail();
     if (email) compact._email = email;
+    const flowUrl = getFlowUrl();
+    if (flowUrl) compact._flow = flowUrl;
 
     const payload = encode(compact);
     const url = `${location.origin}${location.pathname}#d=${payload}`;
@@ -1485,54 +1538,124 @@ function renderEcs(bld, room) {
 // ─────────────────────────────────────────────────────────────
 //  BUILDING COMPLETE — send completion report email
 // ─────────────────────────────────────────────────────────────
-function submitBuildingComplete() {
+function setSyncStatus(state, msg) {
+    const el  = document.getElementById('syncStatus');
+    const txt = document.getElementById('syncMsg');
+    if (!el) return;
+    el.className = 'sync-status ' + state;
+    txt.textContent = msg;
+}
+
+async function submitBuildingComplete() {
     if (!S.curBld || !S.data) return;
     if (!isBldDone(S.curBld)) {
         showMsg('Not Complete', 'Some ECS codes in this building still need a status.');
         return;
     }
 
-    // Completion email stored in payload as _bld_emails: { "BLD1": { to, complete } }
+    const bld   = S.curBld;
+    const today = todayReadable();
+
+    // Get completion email
     let completionEmail = '';
-    if (S.data._bld_emails && S.data._bld_emails[S.curBld]) {
-        completionEmail = S.data._bld_emails[S.curBld].complete || '';
+    if (S.data._bld_emails && S.data._bld_emails[bld]) {
+        completionEmail = S.data._bld_emails[bld].complete || '';
     }
-    // fallback to generic report email
     if (!completionEmail) completionEmail = getReportEmail();
 
-    // Build summary table of this building
-    const bld = S.curBld;
-    const COL = [18, 20, 26];
-    const pad = (s, n) => String(s).substring(0, n).padEnd(n);
-    const div = COL.map(n => '-'.repeat(n)).join('+');
-    const hdr = pad('Room', COL[0]) + '|' + pad('ECS Code', COL[1]) + '|' + pad('Status', COL[2]);
-    const rows = [div, hdr, div];
+    // Build rows array for SharePoint / email
+    const rows = [];
     let total = 0, done = 0;
     for (const r in S.data.d[bld]) {
         S.data.d[bld][r].forEach(e => {
             total++;
-            const v = S.results[mkKey(bld, r, e)] || '';
+            const key = mkKey(bld, r, e);
+            const v   = S.results[key] || '';
             if (v) done++;
-            const ua = S.userAdded[mkKey(bld, r, e)] ? ' *' : '';
-            rows.push(pad(r, COL[0]) + '|' + pad(e + ua, COL[1]) + '|' + pad(v || '—', COL[2]));
+            rows.push({
+                Building:      bld,
+                Room:          r,
+                ECSCode:       e,
+                Status:        v || '',
+                Source:        S.userAdded[key] ? 'User Added' : 'Original',
+                SubmittedDate: new Date().toISOString()
+            });
         });
     }
-    rows.push(div);
-    const uaCount = Object.keys(S.userAdded).filter(k => k.startsWith(bld + '|')).length;
-    const uaNote  = uaCount > 0 ? `\n(* = ${uaCount} user-added code${uaCount > 1 ? 's' : ''})` : '';
+
+    // ── Try Power Automate flow first ────────────────────────────────────────
+    const flowUrl = S.data._flow || '';
+    const btn = document.getElementById('submitBldBtnInner');
+
+    if (flowUrl) {
+        setSyncStatus('syncing', 'Syncing to SharePoint...');
+        if (btn) btn.disabled = true;
+
+        try {
+            const resp = await fetch(flowUrl, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    building:  bld,
+                    date:      today,
+                    total:     total,
+                    completed: done,
+                    rows:      rows
+                })
+            });
+
+            if (resp.ok || resp.status === 202) {
+                // 202 Accepted is normal for async Power Automate flows
+                setSyncStatus('success',
+                    `Synced to SharePoint — ${done} of ${total} ECS codes submitted.`);
+                if (btn) btn.disabled = false;
+                // Also open completion email if configured
+                if (completionEmail) {
+                    setTimeout(() => openCompletionEmail(bld, completionEmail, total, done, rows), 800);
+                }
+                return;
+            } else {
+                throw new Error(`HTTP ${resp.status}`);
+            }
+        } catch (err) {
+            setSyncStatus('error',
+                `SharePoint sync failed (${err.message}). Falling back to email.`);
+            if (btn) btn.disabled = false;
+            // Fall through to email
+        }
+    }
+
+    // ── Fallback: open completion email ──────────────────────────────────────
+    openCompletionEmail(bld, completionEmail, total, done, rows);
+}
+
+function openCompletionEmail(bld, completionEmail, total, done, rows) {
+    const COL = [18, 20, 26, 12];
+    const pad = (s, n) => String(s).substring(0, n).padEnd(n);
+    const div = COL.map(n => '-'.repeat(n)).join('+');
+    const hdr = pad('Room',COL[0])+'|'+pad('ECS Code',COL[1])+'|'+
+                pad('Status',COL[2])+'|'+pad('Source',COL[3]);
+    const lines = [div, hdr, div];
+    rows.forEach(row => {
+        lines.push(pad(row.Room,COL[0])+'|'+pad(row.ECSCode,COL[1])+'|'+
+                   pad(row.Status||'—',COL[2])+'|'+pad(row.Source,COL[3]));
+    });
+    lines.push(div);
+
+    const uaCount = rows.filter(r => r.Source === 'User Added').length;
+    const uaNote  = uaCount > 0
+        ? `\n(includes ${uaCount} user-added code${uaCount > 1 ? 's' : ''})`  : '';
 
     const subject = encodeURIComponent(`Inspection Complete — ${bld} — ${todayReadable()}`);
-    const body = encodeURIComponent(
+    const body    = encodeURIComponent(
         `Inspection report for building: ${bld}\n` +
         `Date: ${todayReadable()}\n` +
-        `Verified: ${done} of ${total} ECS codes\n` +
+        `Verified: ${done} of ${total} ECS codes` +
         uaNote + '\n\n' +
-        rows.join('\n') +
+        lines.join('\n') +
         '\n\nProduction Control Inspection System'
     );
-
-    const to = completionEmail || '';
-    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${completionEmail || ''}?subject=${subject}&body=${body}`;
 }
 
 // ─────────────────────────────────────────────────────────────
