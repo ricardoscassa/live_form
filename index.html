@@ -2570,6 +2570,7 @@ Room Codes (Room- Codes)
                 <div class="action-buttons">
                     <button id="exportExcel" class="button success">Export to CSV</button>
                     <button id="downloadJsonCheckPage" class="button warning">Download Data (JSON)</button>
+                    <button id="shareCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
                     <button id="backToInput" class="button secondary">Back to Input</button>
                 </div>
             </div>
@@ -2613,6 +2614,7 @@ Room Codes (Room- Codes)
                 <div class="action-buttons">
                     <button id="exportCodeExcel" class="button success">Export to CSV</button>
                      <button id="downloadJsonCodeCheckPage" class="button warning">Download Data (JSON)</button>
+                     <button id="shareCodeCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
                     <button id="downloadAllPhotosBtn" class="button">📥 Download All Photos</button>
                     <button id="backToCodeInput" class="button secondary">Back to Input</button>
                 </div>
@@ -2665,6 +2667,7 @@ Room Codes (Room- Codes)
                 <div class="action-buttons">
                     <button id="exportAssetTagz2Csv" class="button success">Export to CSV</button>
                     <button id="downloadJsonAssetTagz2" class="button warning">Download Data (JSON)</button>
+                    <button id="shareAssetTagz2" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
                     <button id="backToAssetTagz2Input" class="button secondary">Back to Input</button>
                 </div>
             </div>
@@ -2726,6 +2729,7 @@ Room Codes (Room- Codes)
                 <div class="action-buttons">
                     <button id="exportSeStSvCsv" class="button success">Export to CSV</button>
                     <button id="downloadJsonSeStSvCheckPage" class="button warning">Download Data (JSON)</button>
+                    <button id="shareSeStSvCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
                     <button id="backToSeStSvInput" class="button secondary">Back to Input</button>
                 </div>
             </div>
@@ -2832,6 +2836,7 @@ Room Codes (Room- Codes)
                     <button id="flexExportCsv" class="button success">Export to CSV</button>
                     <button id="flexExportRoomStatus" class="button success">Export Room Status</button>
                     <button id="flexDownloadJson" class="button warning">Download Data (JSON)</button>
+                    <button id="flexShareData" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
                     <button id="flexUploadBarcodes" class="button">Upload Barcodes JSON</button>
                     <button id="backToFlexInput" class="button secondary">Back to Input</button>
                 </div>
@@ -2958,6 +2963,47 @@ Room Codes (Room- Codes)
                     <button id="messageConfirm" class="button success" style="display: none;">Accept with Suffix</button>
                     <button id="messageCancel" class="button secondary" style="display: none;">Cancel</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="modal">
+        <div class="modal-content" style="max-width:360px;text-align:center;">
+            <h3 style="margin-bottom:14px;color:#333;">📤 Share Inspection Data</h3>
+            <p style="font-size:0.82rem;color:#666;margin-bottom:14px;">
+                Scan the QR code or copy the link to transfer data to another device.<br>
+                <em style="color:#c0392b;">Photos are not included.</em>
+            </p>
+
+            <!-- QR code container -->
+            <div id="shareQrContainer" style="display:flex;justify-content:center;margin-bottom:14px;">
+                <div id="shareQrCode" style="display:inline-block;padding:10px;background:#fff;border-radius:8px;border:1px solid #ddd;"></div>
+            </div>
+
+            <!-- Char count badge -->
+            <div id="shareCharCount" style="font-size:0.78rem;color:#888;margin-bottom:10px;"></div>
+
+            <!-- Link row — single line, truncated, with copy button -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                <span id="shareUrlDisplay"
+                      style="flex:1;font-size:0.75rem;color:#555;overflow:hidden;text-overflow:ellipsis;
+                             white-space:nowrap;background:#f4f4f4;border-radius:6px;
+                             padding:7px 10px;cursor:pointer;border:1px solid #ddd;"
+                      title="Click to copy"
+                      onclick="copyShareUrl()"></span>
+                <button onclick="copyShareUrl()"
+                        style="flex-shrink:0;padding:7px 14px;border:none;border-radius:6px;
+                               background:linear-gradient(135deg,#FF6B00,#FF9A3C);
+                               color:#fff;font-size:0.82rem;cursor:pointer;font-weight:600;">
+                    Copy
+                </button>
+            </div>
+
+            <div id="shareCopiedMsg" style="font-size:0.8rem;color:#27ae60;height:18px;margin-bottom:8px;"></div>
+
+            <div class="modal-buttons">
+                <button onclick="hideShareModal()" class="button secondary">Close</button>
             </div>
         </div>
     </div>
@@ -3184,6 +3230,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
 // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
             loadDataFromStorage();
+            tryLoadFromHash(); // import shared data if ?d= hash is present
             setupEventListeners();
             renderDropdownEditor(); // Initialize status dropdown editor
             renderCommentDropdownEditor(); // Initialize comment dropdown editor
@@ -3242,6 +3289,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('nextRoom').addEventListener('click', () => navigateRoom(1));
             document.getElementById('exportExcel').addEventListener('click', exportToCsv);
             document.getElementById('downloadJsonCheckPage').addEventListener('click', downloadJsonData);
+            document.getElementById('shareCheckPage').addEventListener('click', showShareModal);
             document.getElementById('backToInput').addEventListener('click', backToInput);
 
             // Code check page buttons
@@ -3249,6 +3297,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('nextCodeRoom').addEventListener('click', () => navigateCodeRoom(1));
             document.getElementById('exportCodeExcel').addEventListener('click', exportCodeToCsv);
             document.getElementById('downloadJsonCodeCheckPage').addEventListener('click', downloadJsonData);
+            document.getElementById('shareCodeCheckPage').addEventListener('click', showShareModal);
             document.getElementById('backToCodeInput').addEventListener('click', backToCodeInput);
 
             // ECS Quick Entry toggle
@@ -3290,6 +3339,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('nextAssetTagz2Room').addEventListener('click', () => navigateAssetTagz2Room(1));
             document.getElementById('exportAssetTagz2Csv').addEventListener('click', exportAssetTagz2ToCsv);
             document.getElementById('downloadJsonAssetTagz2').addEventListener('click', downloadJsonData);
+            document.getElementById('shareAssetTagz2').addEventListener('click', showShareModal);
             document.getElementById('backToAssetTagz2Input').addEventListener('click', backToAssetTagz2Input);
 
             // SE/ST/SV check page buttons
@@ -3297,6 +3347,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('nextSeStSvRoom').addEventListener('click', () => navigateSeStSvRoom(1));
             document.getElementById('exportSeStSvCsv').addEventListener('click', exportSeStSvToCsv);
             document.getElementById('downloadJsonSeStSvCheckPage').addEventListener('click', downloadJsonData);
+            document.getElementById('shareSeStSvCheckPage').addEventListener('click', showShareModal);
             document.getElementById('backToSeStSvInput').addEventListener('click', backToSeStSvInput);
 
             // Room status buttons
@@ -3405,6 +3456,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('flexNextRoom').addEventListener('click', () => navigateFlexRoom(1));
             document.getElementById('flexExportCsv').addEventListener('click', exportFlexibleToCsv);
             document.getElementById('flexDownloadJson').addEventListener('click', downloadJsonData);
+            document.getElementById('flexShareData').addEventListener('click', showShareModal);
             document.getElementById('backToFlexInput').addEventListener('click', backToFlexInput);
             document.getElementById('flexUploadBarcodes').addEventListener('click', showFlexFileUploadModal);
             // Export the room access status separately (does not override the main export)
@@ -3895,7 +3947,20 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     }
                 }
                 codeListTextarea.value = codeText;
+
+                // Preserve any imported checkData / comments before generateCodeCheckItems
+                // re-initialises them (it resets those dicts when called fresh).
+                const savedCheckData    = Object.assign({}, appState.checkData);
+                const savedComments     = Object.assign({}, appState.codeSpecificComments);
+                const savedIsInspection = appState.isInspectionMode;
+
                 generateCodeCheckItems();
+
+                // Merge saved data back — imported entries win over the fresh nulls
+                Object.assign(appState.checkData, savedCheckData);
+                Object.assign(appState.codeSpecificComments, savedComments);
+                appState.isInspectionMode = savedIsInspection;
+
                 showCodeCheckPage();
                 updateCodeCheckPage();
                 updateCodeCheckStates();
@@ -6149,6 +6214,401 @@ barcodeWrapper.appendChild(barcodeInput);
             showMessageModal('Reset Complete', 'Application has been reset successfully.');
         }
 
+        // ══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════
+        //  SHARE / QR CODE SYSTEM
+        //  Strategy: minify appState before deflate — short keys, strip
+        //  defaults/photos/empties, encode EA arrays as token strings,
+        //  compress ECS checkData keys using room-index prefix.
+        //  Encode with pako deflate + chunked btoa + base64url.
+        //  Target: < 1200 chars encoded for reliable phone QR scanning.
+        // ══════════════════════════════════════════════════════════════════
+
+        // ── Token map for 1-char status values ──────────────────────────
+        const _sTok  = { 'null':'-','true':'T','false':'F','':'.','no-access':'N','completed':'C','in-progress':'P','pending':'W' };
+        const _sTokR = Object.fromEntries(Object.entries(_sTok).map(([k,v])=>[v,k]));
+
+        function _tok(v) {
+            const s = (v === null || v === undefined) ? 'null' : String(v);
+            return (_sTok[s] !== undefined) ? _sTok[s] : ('~' + s + '~');
+        }
+        function _untok(t) {
+            if (typeof t !== 'string') return t;
+            if (t.startsWith('~') && t.endsWith('~')) return t.slice(1, -1);
+            const v = _sTokR[t];
+            if (v === undefined)  return t;
+            if (v === 'null')     return null;
+            if (v === 'true')     return true;
+            if (v === 'false')    return false;
+            return v;
+        }
+
+        // ── EA checkData array encoder (null/true/false/string → 1-char) ─
+        function _encArr(arr) {
+            return arr.map(v => {
+                if (v === null || v === undefined) return '-';
+                if (v === true)  return 'T';
+                if (v === false) return 'F';
+                const s = String(v);
+                return (_sTok[s] !== undefined) ? _sTok[s] : ('~' + s + '~');
+            }).join('');
+        }
+        function _decArr(str) {
+            const out = []; let i = 0;
+            while (i < str.length) {
+                if (str[i] === '~') {
+                    const end = str.indexOf('~', i + 1);
+                    out.push(str.slice(i + 1, end));
+                    i = end + 1;
+                } else {
+                    out.push(_untok(str[i]));
+                    i++;
+                }
+            }
+            return out;
+        }
+
+        // ── Minify appState → compact payload ───────────────────────────
+        function _minify(state) {
+            const m = { _v: 4 };
+
+            // rooms (EA inspection)
+            if (state.rooms && state.rooms.length)    m.r  = state.rooms;
+            if (state.currentRoomIndex)               m.ri = state.currentRoomIndex;
+            if (state.isInspectionMode)               m.im = 1;
+
+            // roomStatus tokens
+            if (state.roomStatus && Object.keys(state.roomStatus).length) {
+                m.rs = {};
+                Object.entries(state.roomStatus).forEach(([k, v]) => { m.rs[k] = _tok(v); });
+            }
+
+            // checkData — split EA arrays from ECS flat numbers.
+            // ECS statuses are stored as per-room arrays (index = position in roomCodes[room])
+            // so keys are just "0","1","2"... — tiny and compresses extremely well.
+            if (state.checkData && Object.keys(state.checkData).length) {
+                const cda = {};   // EA  { roomName: tokenString }
+                const cde = {};   // ECS { "roomIndex": [status|null, ...] }
+                const roomNames = Object.keys(state.roomCodes || {});
+
+                // Build per-room status arrays for ECS
+                roomNames.forEach((room, ri) => {
+                    const codesForRoom = state.roomCodes[room] || [];
+                    const arr = codesForRoom.map(code => {
+                        const key = room + '-' + code;
+                        const v   = state.checkData[key];
+                        return (v !== null && v !== undefined) ? v : null;
+                    });
+                    // Only store if at least one status is set
+                    if (arr.some(v => v !== null)) cde[String(ri)] = arr;
+                });
+
+                // EA arrays (keyed by room name directly)
+                Object.entries(state.checkData).forEach(([k, v]) => {
+                    if (Array.isArray(v)) {
+                        const enc = _encArr(v);
+                        if (enc.replace(/-/g, '').length > 0) cda[k] = enc;
+                    }
+                });
+
+                if (Object.keys(cda).length) m.cda = cda;
+                if (Object.keys(cde).length) m.cde = cde;
+                // Room names for decoding are derived from rc in _unminify.
+            }
+
+            // ECS codes
+            if (state.roomCodes && Object.keys(state.roomCodes).length) m.rc = state.roomCodes;
+            if (state.currentCodeRoomIndex)                              m.ci = state.currentCodeRoomIndex;
+
+            // codeSpecificComments — keep only non-empty entries
+            if (state.codeSpecificComments) {
+                const csc = {};
+                Object.entries(state.codeSpecificComments).forEach(([k, v]) => {
+                    if (v !== null && v !== undefined && v !== '') csc[k] = v;
+                });
+                if (Object.keys(csc).length) m.cc = csc;
+            }
+
+            // SeStSv
+            if (state.seStSvRooms && state.seStSvRooms.length)                m.sr = state.seStSvRooms;
+            if (state.currentSeStSvRoomIndex)                                  m.si = state.currentSeStSvRoomIndex;
+            if (state.seStSvData && Object.keys(state.seStSvData).length)      m.sd = state.seStSvData;
+
+            // Custom dropdown options (only if non-default)
+            if (state.customStatusOptions  && state.customStatusOptions.length)  m.cso = state.customStatusOptions;
+            if (state.customCommentOptions && state.customCommentOptions.length) m.cco = state.customCommentOptions;
+            if (state.ecsQuickEntryMode)                                          m.qe  = 1;
+            if (state.ecsQuickEntryState && Object.keys(state.ecsQuickEntryState || {}).length) m.qes = state.ecsQuickEntryState;
+
+            // Asset Tagz 2
+            const at = state.assetTagz2 || {};
+            const atm = {};
+            if (at.roomCodes     && Object.keys(at.roomCodes).length)          atm.rc  = at.roomCodes;
+            if (at.currentRoomIndex)                                            atm.ri  = at.currentRoomIndex;
+            if (at.barcodePresets && at.barcodePresets.length)                 atm.bp  = at.barcodePresets;
+            if (at.barcodePool)                                                 atm.bpl = at.barcodePool;
+            if (at.barcodePoolTotal)                                            atm.bpt = at.barcodePoolTotal;
+            if (at.barcodesByCodeId && Object.keys(at.barcodesByCodeId).length) atm.bc = at.barcodesByCodeId;
+            if (at.statusByCodeId && Object.keys(at.statusByCodeId).length) {
+                atm.st = {};
+                Object.entries(at.statusByCodeId).forEach(([k, v]) => { atm.st[k] = _tok(v); });
+            }
+            if (at.commentsByCodeId && Object.keys(at.commentsByCodeId).length) {
+                const c = {};
+                Object.entries(at.commentsByCodeId).forEach(([k, v]) => { if (v) c[k] = v; });
+                if (Object.keys(c).length) atm.cb = c;
+            }
+            if (Object.keys(atm).length) m.at = atm;
+
+            // Flexible inspections — strip photos
+            const fl = state.flexibleInspections || {};
+            const flm = {};
+            if (fl.rooms && fl.rooms.length) {
+                flm.r = fl.rooms.map(room => { const rr = Object.assign({}, room); delete rr.photos; return rr; });
+            }
+            if (fl.currentRoomIndex)                                              flm.ri = fl.currentRoomIndex;
+            if (fl.unassignedBarcodes && fl.unassignedBarcodes.length)            flm.ub = fl.unassignedBarcodes;
+            if (fl.assignments        && Object.keys(fl.assignments).length)      flm.as = fl.assignments;
+            if (fl.inspections        && fl.inspections.length)                   flm.in = fl.inspections;
+            if (fl.ecsPresets         && fl.ecsPresets.length)                    flm.ep = fl.ecsPresets;
+            if (fl.locks              && Object.keys(fl.locks).length)            flm.lk = fl.locks;
+            if (fl.isFlexibleMode)                                                 flm.fm = 1;
+            if (Object.keys(flm).length) m.fl = flm;
+
+            return m;
+        }
+
+        // ── Restore minified payload → full appState shape ───────────────
+        function _unminify(m) {
+            // No version flag = very old format, return raw
+            if (!m._v) return m;
+
+            // Room name list — derived from rc keys (order is insertion order, preserved in JSON)
+            const roomNames = Object.keys(m.rc || {});
+
+            const s = {
+                rooms:                  m.r   || [],
+                currentRoomIndex:       m.ri  || 0,
+                isInspectionMode:       !!m.im,
+                roomStatus:             {},
+                checkData:              {},
+                roomCodes:              m.rc  || {},
+                currentCodeRoomIndex:   m.ci  || 0,
+                codeSpecificComments:   {},
+                seStSvRooms:            m.sr  || [],
+                currentSeStSvRoomIndex: m.si  || 0,
+                seStSvData:             m.sd  || {},
+                customStatusOptions:    m.cso || [],
+                customCommentOptions:   m.cco || [],
+                ecsQuickEntryMode:      !!m.qe,
+                ecsQuickEntryState:     m.qes || {},
+                assetTagz2: {
+                    roomCodes: {}, currentRoomIndex: 0, statusByCodeId: {},
+                    commentsByCodeId: {}, barcodesByCodeId: {}, barcodePresets: []
+                },
+                flexibleInspections: {
+                    rooms: [], currentRoomIndex: 0, unassignedBarcodes: [],
+                    assignments: {}, inspections: [], ecsPresets: [], locks: {},
+                    poolVisibleCount: 10, isFlexibleMode: false
+                }
+            };
+
+            // roomStatus
+            if (m.rs) Object.entries(m.rs).forEach(([k, v]) => { s.roomStatus[k] = _untok(v); });
+
+            // checkData EA arrays (v2 used "cd", v3+ uses "cda")
+            const cdaSrc = (m._v === 2) ? m.cd : m.cda;
+            if (cdaSrc) Object.entries(cdaSrc).forEach(([room, enc]) => {
+                s.checkData[room] = (typeof enc === 'string') ? _decArr(enc) : enc;
+            });
+
+            // checkData ECS — stored as per-room arrays: { "roomIndex": [status|null, ...] }
+            // Expand back to flat { "RoomName-ECSCode": statusIndex } entries
+            if (m.cde) {
+                Object.entries(m.cde).forEach(([riStr, arr]) => {
+                    const ri   = parseInt(riStr, 10);
+                    const room = roomNames[ri];
+                    if (!room) return;
+                    const codesForRoom = (m.rc || {})[room] || [];
+                    arr.forEach((v, ci) => {
+                        if (v !== null && v !== undefined) {
+                            s.checkData[room + '-' + codesForRoom[ci]] = v;
+                        }
+                    });
+                });
+            }
+
+            // codeSpecificComments — keys stored as-is (no compression needed)
+            if (m.cc) Object.assign(s.codeSpecificComments, m.cc);
+
+            // Asset Tagz 2
+            const at = m.at || {};
+            s.assetTagz2 = {
+                roomCodes:        at.rc  || {},
+                currentRoomIndex: at.ri  || 0,
+                statusByCodeId:   {},
+                commentsByCodeId: at.cb  || {},
+                barcodesByCodeId: at.bc  || {},
+                barcodePresets:   at.bp  || [],
+                barcodePool:      at.bpl || null,
+                barcodePoolTotal: at.bpt || 0
+            };
+            if (at.st) Object.entries(at.st).forEach(([k, v]) => { s.assetTagz2.statusByCodeId[k] = _untok(v); });
+
+            // Flexible inspections
+            const fl = m.fl || {};
+            s.flexibleInspections = {
+                rooms:               fl.r  || [],
+                currentRoomIndex:    fl.ri || 0,
+                unassignedBarcodes:  fl.ub || [],
+                assignments:         fl.as || {},
+                inspections:         fl.in || [],
+                ecsPresets:          fl.ep || [],
+                locks:               fl.lk || {},
+                poolVisibleCount:    10,
+                isFlexibleMode:      !!fl.fm
+            };
+
+            return s;
+        }
+
+        // ── Public API ───────────────────────────────────────────────────
+
+        function buildSharePayload() {
+            return _minify(JSON.parse(JSON.stringify(appState)));
+        }
+
+        /** Encode with pako deflate + chunked btoa + base64url.
+         *  Chunked approach (0x8000 byte blocks) is safe for any payload size
+         *  and matches the pattern used in building-inspection-6.html. */
+        function encodeShareData(payload) {
+            const deflated = pako.deflate(JSON.stringify(payload));
+            const chunk = 0x8000;
+            let b64 = '';
+            for (let i = 0; i < deflated.length; i += chunk) {
+                b64 += String.fromCharCode.apply(null, deflated.subarray(i, i + chunk));
+            }
+            return btoa(b64).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        /** Decode base64url → inflate → unminify */
+        function decodeShareData(encoded) {
+            const b64    = encoded.replace(/-/g, '+').replace(/_/g, '/');
+            const binary = atob(b64);
+            const bytes  = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return _unminify(JSON.parse(pako.inflate(bytes, { to: 'string' })));
+        }
+
+        function buildShareUrl() {
+            const encoded = encodeShareData(buildSharePayload());
+            const base    = window.location.href.split('#')[0];
+            return { url: base + '#d=' + encoded, chars: encoded.length };
+        }
+
+        // ── Modal UI ─────────────────────────────────────────────────────
+
+        function showShareModal() {
+            const { url, chars } = buildShareUrl();
+
+            // Char count with colour hint
+            const countEl = document.getElementById('shareCharCount');
+            let color = '#27ae60', msg = '✅ Good — should scan easily.';
+            if (chars > 1500) { color = '#e67e22'; msg = '⚠️ Medium — may need a steady hand.'; }
+            if (chars > 2500) { color = '#c0392b'; msg = '❌ Large — use Copy Link instead.'; }
+            countEl.innerHTML = `Encoded size: <strong style="color:${color}">${chars} chars</strong> &nbsp;${msg}`;
+
+            // Link display
+            const disp = document.getElementById('shareUrlDisplay');
+            disp.textContent = url;
+            disp.dataset.url = url;
+
+            document.getElementById('shareCopiedMsg').textContent = '';
+
+            // QR code — render into hidden div, works for both canvas and img output
+            const qrDiv = document.getElementById('shareQrCode');
+            qrDiv.innerHTML = '';
+            if (chars > 2953) {
+                // Hard QR limit (binary mode, error level L)
+                qrDiv.innerHTML = '<p style="color:#c0392b;font-size:0.82rem;padding:10px;">Data too large for QR.<br>Use the Copy Link instead.</p>';
+            } else {
+                try {
+                    new QRCode(qrDiv, {
+                        text: url,
+                        width: 220, height: 220,
+                        colorDark: '#000000', colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                } catch (e) {
+                    qrDiv.innerHTML = '<p style="color:#c0392b;font-size:0.82rem;">QR error — use Copy Link.</p>';
+                }
+            }
+
+            document.getElementById('shareModal').classList.add('active');
+        }
+
+        function hideShareModal() {
+            document.getElementById('shareModal').classList.remove('active');
+        }
+
+        function copyShareUrl() {
+            const url = document.getElementById('shareUrlDisplay').dataset.url || '';
+            if (!url) return;
+            const showCopied = () => {
+                const msg = document.getElementById('shareCopiedMsg');
+                msg.textContent = '✅ Link copied!';
+                setTimeout(() => { msg.textContent = ''; }, 3000);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(showCopied).catch(() => _copyFallback(url, showCopied));
+            } else {
+                _copyFallback(url, showCopied);
+            }
+        }
+        function _copyFallback(text, cb) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            try { document.execCommand('copy'); cb(); } catch(e) {}
+            document.body.removeChild(ta);
+        }
+
+        /** Called at page load — if URL hash is #d=... import the shared data */
+        function tryLoadFromHash() {
+            const hash = window.location.hash;
+            if (!hash.startsWith('#d=')) return;
+            const encoded = hash.slice(3);
+            if (!encoded) return;
+            try {
+                const data = decodeShareData(encoded);
+                appState = Object.assign({
+                    rooms: [], currentRoomIndex: 0, checkData: {}, roomStatus: {},
+                    isInspectionMode: false, roomCodes: {}, currentCodeRoomIndex: 0,
+                    codeSpecificComments: {}, seStSvRooms: [], currentSeStSvRoomIndex: 0,
+                    seStSvData: {}, customStatusOptions: [], customCommentOptions: [],
+                    assetTagz2: { roomCodes: {}, currentRoomIndex: 0, statusByCodeId: {},
+                                  commentsByCodeId: {}, barcodesByCodeId: {}, barcodePresets: [] },
+                    flexibleInspections: { rooms: [], currentRoomIndex: 0, unassignedBarcodes: [],
+                                          assignments: {}, inspections: [], ecsPresets: [], locks: {},
+                                          poolVisibleCount: 10, isFlexibleMode: false }
+                }, data);
+                normalizeAppState();
+                saveDataToStorage();
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+                setTimeout(() => {
+                    refreshUIFromState();
+                    renderDropdownEditor();
+                    renderCommentDropdownEditor();
+                    showMessageModal('Data Imported', 'Shared inspection data loaded successfully!');
+                }, 300);
+            } catch (e) {
+                console.warn('Share import failed:', e);
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+        }
+
         function showFileUploadModal() {
             document.getElementById('fileUploadModal').classList.add('active');
             document.getElementById('fileName').textContent = '';
@@ -7104,6 +7564,11 @@ function renderFlexBarcodeRows() {
 
     <!-- JSZip for bundling photos into a zip download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- Pako (zlib deflate) for QR/link share compression -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <!-- QRCode.js for generating QR codes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <script>
     // ══════════════════════════════════════════════════════════════════
