@@ -8104,6 +8104,411 @@ function renderFlexBarcodeRows() {
         });
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    //  CAMERA — ASSET TAGZ 2.0
+    //  Same IndexedDB + stamp logic as ECS. codeId = "RoomName-Code".
+    //  State reads from appState.assetTagz2.statusByCodeId / commentsByCodeId.
+    // ══════════════════════════════════════════════════════════════════
+
+    // ── Inject camera buttons for rows that already have status/comment ──
+    function injectCameraButtonsIntoAt2Rows() {
+        const at = appState.assetTagz2 || {};
+        const roomNames = Object.keys(at.roomCodes || {});
+        if (!roomNames.length) return;
+        const currentRoomName = roomNames[at.currentRoomIndex || 0];
+        const codes = (at.roomCodes[currentRoomName] || []);
+        codes.forEach(code => {
+            const codeId = `${currentRoomName}-${code}`;
+            const hasStatus  = at.statusByCodeId  && at.statusByCodeId[codeId]  !== null && at.statusByCodeId[codeId]  !== undefined;
+            const hasComment = at.commentsByCodeId && at.commentsByCodeId[codeId] && at.commentsByCodeId[codeId] !== '';
+            if (hasStatus || hasComment) {
+                document.querySelectorAll('#assetTagz2ChecksContainer .grid-row').forEach(row => {
+                    const codeCell = row.querySelector('.grid-cell.code-cell');
+                    if (codeCell && codeCell.textContent.trim() === code) {
+                        addCameraButtonToRow(row, codeId, currentRoomName, code);
+                    }
+                });
+            }
+        });
+    }
+
+    // Patch generateAssetTagz2CheckItems so camera buttons are always injected after render
+    const _origGAt2 = window.generateAssetTagz2CheckItems;
+    window.generateAssetTagz2CheckItems = function() {
+        if (_origGAt2) _origGAt2();
+        setTimeout(injectCameraButtonsIntoAt2Rows, 0);
+    };
+
+    // ── Show camera button on status selection ────────────────────────
+    function _showCameraForAt2CodeId(codeId) {
+        const at = appState.assetTagz2 || {};
+        const roomNames = Object.keys(at.roomCodes || {});
+        const roomName = roomNames[at.currentRoomIndex || 0] || '';
+        document.querySelectorAll('#assetTagz2ChecksContainer .grid-row').forEach(row => {
+            const btn = row.querySelector(`.status-button[data-code-id="${codeId}"]`);
+            if (btn) {
+                const codeCell = row.querySelector('.grid-cell.code-cell');
+                const ecsCode = codeCell ? codeCell.textContent.trim() : codeId;
+                addCameraButtonToRow(row, codeId, roomName, ecsCode);
+            }
+        });
+    }
+
+    // ── Event delegation — status click ──────────────────────────────
+    document.addEventListener('click', function(e) {
+        const container = document.getElementById('assetTagz2ChecksContainer');
+        if (!container || !container.contains(e.target)) return;
+        const statusOpt = e.target.closest('.status-option:not(.clear-option)');
+        if (statusOpt) {
+            const panel = statusOpt.closest('.status-options');
+            if (panel && !panel.dataset.role) {
+                const codeId = statusOpt.dataset.codeId;
+                if (codeId) setTimeout(() => _showCameraForAt2CodeId(codeId), 50);
+            }
+        }
+    }, true);
+
+    // ── Event delegation — comment select change ──────────────────────
+    document.addEventListener('change', function(e) {
+        const container = document.getElementById('assetTagz2ChecksContainer');
+        if (!container || !container.contains(e.target)) return;
+        if (e.target.classList.contains('comment-textarea')) {
+            const codeId = e.target.dataset.codeId;
+            if (codeId && e.target.value && e.target.value !== '__custom__') {
+                setTimeout(() => _showCameraForAt2CodeId(codeId), 50);
+            }
+        }
+    });
+
+    // ── Event delegation — custom comment textarea input ─────────────
+    document.addEventListener('input', function(e) {
+        const container = document.getElementById('assetTagz2ChecksContainer');
+        if (!container || !container.contains(e.target)) return;
+        if (e.target.classList.contains('custom-comment-input')) {
+            const codeId = e.target.dataset.codeId;
+            if (codeId && e.target.value.trim()) setTimeout(() => _showCameraForAt2CodeId(codeId), 50);
+        }
+    });
+
+    // ── Override addCameraButtonToRow stamp text for AT2 rows ─────────
+    // The base addCameraButtonToRow reads appState.checkData for status text.
+    // For AT2 rows we need to read from appState.assetTagz2.statusByCodeId instead.
+    // We do this by monkey-patching the file input change handler AFTER addCameraButtonToRow
+    // adds the row — swap out the status/comment reads for the AT2 variant.
+    function _patchAt2CameraRow(rowDiv, codeId, roomName, ecsCode) {
+        // Find the file input that addCameraButtonToRow just added
+        const fileInput = rowDiv.querySelector('.camera-file-input');
+        if (!fileInput || fileInput.dataset.at2patched) return;
+        fileInput.dataset.at2patched = '1';
+
+        // Remove the existing change listener (clone-replace trick)
+        const newInput = fileInput.cloneNode(true);
+        fileInput.parentNode.replaceChild(newInput, fileInput);
+
+        newInput.addEventListener('change', async function() {
+            const file = newInput.files[0];
+            if (!file) return;
+
+            // Read AT2-specific status + comment
+            const at = appState.assetTagz2 || {};
+            const codeStatusOptions = (typeof getCodeStatusOptions === 'function') ? getCodeStatusOptions() : [];
+            const statusIdx  = at.statusByCodeId  ? at.statusByCodeId[codeId]  : null;
+            const statusText = (statusIdx !== null && statusIdx !== undefined && codeStatusOptions[statusIdx])
+                ? codeStatusOptions[statusIdx] : '';
+            const commentText = (at.commentsByCodeId && at.commentsByCodeId[codeId])
+                ? at.commentsByCodeId[codeId] : '';
+
+            // Find the refreshCount function on the view button via closure — we use
+            // the badge + view button in the same camera-row instead
+            const cameraRow  = newInput.closest('.camera-row');
+            const badge      = cameraRow ? cameraRow.querySelector('.cam-badge') : null;
+            const viewBtn    = cameraRow ? cameraRow.querySelector('.cam-view-btn') : null;
+
+            async function refreshAt2Count() {
+                try {
+                    const photos = await getPhotosByCodeId(codeId);
+                    const count = photos.length;
+                    if (badge) {
+                        badge.textContent = count > 0 ? count : '';
+                        count > 0 ? badge.classList.add('visible') : badge.classList.remove('visible');
+                    }
+                    if (viewBtn) {
+                        const vc = viewBtn.querySelector('.view-count');
+                        if (vc) vc.textContent = count;
+                        count > 0 ? viewBtn.classList.add('visible') : viewBtn.classList.remove('visible');
+                    }
+                } catch(e) { /* ignore */ }
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                openStampEditor(ev.target.result, codeId, roomName, ecsCode,
+                    statusText, commentText,
+                    async (finalDataUrl) => {
+                        try {
+                            await savePhoto(codeId, roomName, ecsCode, finalDataUrl);
+                            await refreshAt2Count();
+                            showMessageModal('Photo Saved ✓', `Photo saved for ${ecsCode}.`);
+                        } catch(err) {
+                            showMessageModal('Error', 'Could not save photo. Storage may be full.');
+                        }
+                        newInput.value = '';
+                    },
+                    () => {
+                        newInput.value = '';
+                        setTimeout(() => newInput.click(), 80);
+                    }
+                );
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Hook: after addCameraButtonToRow is called for an AT2 row, patch the input
+    const _origAddCamBtn = window.addCameraButtonToRow || addCameraButtonToRow;
+    // We wrap _showCameraForAt2CodeId to patch after the row is added
+    const _origShowAt2 = _showCameraForAt2CodeId;
+    // Override the AT2 show function to also patch the file input
+    window._showCameraForAt2CodeId = function(codeId) {
+        _origShowAt2(codeId);
+        setTimeout(() => {
+            const at = appState.assetTagz2 || {};
+            const roomNames = Object.keys(at.roomCodes || {});
+            const roomName = roomNames[at.currentRoomIndex || 0] || '';
+            document.querySelectorAll('#assetTagz2ChecksContainer .grid-row').forEach(row => {
+                const codeCell = row.querySelector('.grid-cell.code-cell');
+                const code = codeCell ? codeCell.textContent.trim() : '';
+                if (`${roomName}-${code}` === codeId) {
+                    _patchAt2CameraRow(row, codeId, roomName, code);
+                }
+            });
+        }, 10);
+    };
+
+    // Also patch on inject (for rows reloaded from saved state)
+    const _origInjectAt2 = injectCameraButtonsIntoAt2Rows;
+    function injectAndPatchAt2Rows() {
+        _origInjectAt2();
+        setTimeout(() => {
+            const at = appState.assetTagz2 || {};
+            const roomNames = Object.keys(at.roomCodes || {});
+            const roomName = roomNames[at.currentRoomIndex || 0] || '';
+            document.querySelectorAll('#assetTagz2ChecksContainer .grid-row').forEach(row => {
+                const codeCell = row.querySelector('.grid-cell.code-cell');
+                const code = codeCell ? codeCell.textContent.trim() : '';
+                const codeId = `${roomName}-${code}`;
+                _patchAt2CameraRow(row, codeId, roomName, code);
+            });
+        }, 20);
+    }
+
+    // Re-patch generateAssetTagz2CheckItems to use the patching version
+    window.generateAssetTagz2CheckItems = function() {
+        if (_origGAt2) _origGAt2();
+        setTimeout(injectAndPatchAt2Rows, 0);
+    };
+
+    // ══════════════════════════════════════════════════════════════════
+    //  CAMERA — ASSET TAGZ (FLEXIBLE TRACKING)
+    //  codeId  = "room::barcode"  (:: avoids collision with AT2 "room-code")
+    //  Stamp shows: Room / Barcode / ECS code assigned.
+    //  Camera appears when an ECS code is committed (assigned or updated).
+    // ══════════════════════════════════════════════════════════════════
+
+    /** Build the photo ID for a flex assignment */
+    function _flexPhotoId(room, barcode) {
+        return room + '::' + barcode;
+    }
+
+    /**
+     * Add/refresh a camera button on a flex assigned-barcode row.
+     * @param {HTMLElement} row         - the .grid-row element
+     * @param {string}      room        - current room name
+     * @param {string}      barcode     - the barcode text
+     * @param {string}      ecsCode     - the ECS code assigned to this barcode
+     */
+    function addFlexCameraButtonToRow(row, room, barcode, ecsCode) {
+        // Avoid duplicates
+        if (row.querySelector('.camera-row')) return;
+
+        const codeId = _flexPhotoId(room, barcode);
+
+        // Read status + comment from flex state (flex rows have neither — stamp shows barcode→ECS)
+        const statusText  = ecsCode  || '';
+        const commentText = '';
+
+        const cameraRow = document.createElement('div');
+        cameraRow.className = 'camera-row';
+
+        const inputId = 'cam-flex-' + codeId.replace(/[^a-z0-9]/gi, '_');
+
+        const camLabel = document.createElement('label');
+        camLabel.className = 'camera-label';
+        camLabel.htmlFor = inputId;
+        camLabel.setAttribute('role', 'button');
+        camLabel.setAttribute('aria-label', 'Take photo');
+
+        const camIcon = document.createElement('span');
+        camIcon.className = 'cam-icon';
+        camIcon.innerHTML = `<svg width="22" height="18" viewBox="0 0 22 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1L6.5 3H2C1.45 3 1 3.45 1 4V16C1 16.55 1.45 17 2 17H20C20.55 17 21 16.55 21 16V4C21 3.45 20.55 3 20 3H15.5L14 1H8Z" fill="white" stroke="white" stroke-width="0.3"/>
+            <circle cx="11" cy="10" r="3.5" fill="#1C1C1E"/>
+            <circle cx="11" cy="10" r="2.2" fill="white"/>
+            <circle cx="11" cy="10" r="1" fill="#1C1C1E"/>
+            <circle cx="17.5" cy="6" r="1" fill="#3A3A3C"/>
+        </svg>`;
+
+        const camText = document.createElement('span');
+        camText.className = 'cam-text';
+        camText.textContent = 'Camera';
+
+        const badge = document.createElement('span');
+        badge.className = 'cam-badge';
+        badge.setAttribute('aria-label', 'photos taken');
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.setAttribute('capture', 'environment');
+        fileInput.className = 'camera-file-input';
+        fileInput.id = inputId;
+
+        camLabel.appendChild(camIcon);
+        camLabel.appendChild(camText);
+        camLabel.appendChild(badge);
+        camLabel.appendChild(fileInput);
+
+        const viewBtn = document.createElement('button');
+        viewBtn.type = 'button';
+        viewBtn.className = 'cam-view-btn';
+        viewBtn.innerHTML = `<svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="1" width="14" height="10" rx="2" stroke="#1C1C1E" stroke-width="1.5"/>
+            <rect x="3" y="3" width="4" height="3" rx="0.5" fill="#8E8E93"/>
+            <rect x="9" y="3" width="4" height="3" rx="0.5" fill="#8E8E93"/>
+            <rect x="3" y="7.5" width="10" height="1" rx="0.5" fill="#C7C7CC"/>
+        </svg> <span class="view-count"></span> Photos`;
+        viewBtn.setAttribute('aria-label', 'View photos');
+
+        async function refreshFlexCount() {
+            try {
+                const photos = await getPhotosByCodeId(codeId);
+                const count = photos.length;
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.classList.add('visible');
+                    viewBtn.querySelector('.view-count').textContent = count;
+                    viewBtn.classList.add('visible');
+                } else {
+                    badge.classList.remove('visible');
+                    viewBtn.classList.remove('visible');
+                }
+            } catch(e) { /* ignore */ }
+        }
+        refreshFlexCount();
+
+        fileInput.addEventListener('change', async function() {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            // Refresh ECS code at capture time (may have changed)
+            const flex2 = appState.flexibleInspections || {};
+            const rooms2 = flex2.rooms || [];
+            const curRoom2 = rooms2[flex2.currentRoomIndex] || room;
+            const liveEcs = (flex2.assignments[curRoom2] && flex2.assignments[curRoom2][barcode]) || ecsCode || '';
+
+            const stampRoom    = curRoom2;
+            const stampEcs     = barcode + (liveEcs ? ' → ' + liveEcs : '');
+            const stampStatus  = liveEcs;
+            const stampComment = '';
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                openStampEditor(ev.target.result, codeId, stampRoom, stampEcs,
+                    stampStatus, stampComment,
+                    async (finalDataUrl) => {
+                        try {
+                            await savePhoto(codeId, stampRoom, stampEcs, finalDataUrl);
+                            await refreshFlexCount();
+                            showMessageModal('Photo Saved ✓', `Photo saved for ${barcode}.`);
+                        } catch(err) {
+                            showMessageModal('Error', 'Could not save photo. Storage may be full.');
+                        }
+                        fileInput.value = '';
+                    },
+                    () => {
+                        fileInput.value = '';
+                        setTimeout(() => fileInput.click(), 80);
+                    }
+                );
+            };
+            reader.readAsDataURL(file);
+        });
+
+        viewBtn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            const flex2 = appState.flexibleInspections || {};
+            const rooms2 = flex2.rooms || [];
+            const curRoom2 = rooms2[flex2.currentRoomIndex] || room;
+            const liveEcs = (flex2.assignments[curRoom2] && flex2.assignments[curRoom2][barcode]) || ecsCode || '';
+            openPhotoViewer(codeId, curRoom2, barcode + (liveEcs ? ' → ' + liveEcs : ''), refreshFlexCount);
+        });
+
+        cameraRow.appendChild(camLabel);
+        cameraRow.appendChild(viewBtn);
+        row.appendChild(cameraRow);
+    }
+
+    /** Inject camera buttons into all assigned rows that already have an ECS code */
+    function injectCameraButtonsIntoFlexRows() {
+        const flex = appState.flexibleInspections || {};
+        const rooms = flex.rooms || [];
+        const currentRoom = rooms[flex.currentRoomIndex];
+        if (!currentRoom) return;
+
+        const assignedMap = (flex.assignments && flex.assignments[currentRoom]) || {};
+
+        document.querySelectorAll('#flexBarcodeContainer .grid-row:not([data-pool-row])').forEach(row => {
+            const codeCell = row.querySelector('.grid-cell.code-cell');
+            if (!codeCell) return;
+            const barcode = codeCell.textContent.trim();
+            const ecsCode = assignedMap[barcode] || '';
+            if (ecsCode) {
+                addFlexCameraButtonToRow(row, currentRoom, barcode, ecsCode);
+            }
+        });
+    }
+
+    // Patch renderFlexBarcodeRows to always inject cameras after render
+    const _origRFBR = window.renderFlexBarcodeRows;
+    window.renderFlexBarcodeRows = function() {
+        if (_origRFBR) _origRFBR();
+        setTimeout(injectCameraButtonsIntoFlexRows, 0);
+    };
+
+    // Also hook the ECS input commit — when a barcode gets an ECS code, show camera
+    // We listen on the flexBarcodeContainer for input blur/change/enter on .entry-input
+    document.addEventListener('change', function(e) {
+        const container = document.getElementById('flexBarcodeContainer');
+        if (!container || !container.contains(e.target)) return;
+        if (!e.target.classList.contains('entry-input')) return;
+        const val = (e.target.value || '').trim();
+        if (!val) return;
+        const barcode = e.target.dataset.barcode;
+        if (!barcode) return;
+        setTimeout(() => {
+            const flex2 = appState.flexibleInspections || {};
+            const rooms2 = flex2.rooms || [];
+            const currentRoom2 = rooms2[flex2.currentRoomIndex];
+            if (!currentRoom2) return;
+            // Find the row containing this input
+            const row = e.target.closest('.grid-row');
+            if (row && !row.dataset.poolRow) {
+                addFlexCameraButtonToRow(row, currentRoom2, barcode, val);
+            }
+        }, 80);
+    });
+
+
     // ── PWA Service Worker (inline) ───────────────────────────────────
     if ('serviceWorker' in navigator) {
         const swCode = `
