@@ -6364,7 +6364,8 @@ barcodeWrapper.appendChild(barcodeInput);
             const fl = state.flexibleInspections || {};
             const flm = {};
             if (fl.rooms && fl.rooms.length) {
-                flm.r = fl.rooms.map(room => { const rr = Object.assign({}, room); delete rr.photos; return rr; });
+                // fl.rooms is an array of room-name strings — store directly
+                flm.r = fl.rooms.slice();
             }
             if (fl.currentRoomIndex)                                              flm.ri = fl.currentRoomIndex;
             if (fl.unassignedBarcodes && fl.unassignedBarcodes.length)            flm.ub = fl.unassignedBarcodes;
