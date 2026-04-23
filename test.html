@@ -251,11 +251,13 @@
 
         /* PC-only Dropdown Editor Styles */
         .dropdown-editor {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f8f9fa;
+            margin-top: 14px;
+            padding: 16px 16px 14px 18px;
+            background: #ffffff;
             border-radius: 10px;
-            border: 2px solid #e1e5e9;
+            border: 1px solid #dde1e7;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         }
 
         .dropdown-editor h3 {
@@ -266,16 +268,16 @@
         .dropdown-editor-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 8px;
+            margin-bottom: 12px;
         }
 
         .dropdown-editor-item {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px;
-            background: white;
+            padding: 8px 10px;
+            background: #f8f9fc;
             border: 1px solid #e1e5e9;
             border-radius: 8px;
             transition: box-shadow 0.15s ease, opacity 0.15s ease;
@@ -340,27 +342,37 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: background 0.3s ease;
+            transition: background 0.2s ease;
             white-space: nowrap;
         }
 
+        /* Delete List — strong red, clearly destructive */
         .dropdown-editor-btn.remove {
             background: #dc3545;
             color: white;
         }
-
         .dropdown-editor-btn.remove:hover {
-            background: #c82333;
+            background: #b02030;
+        }
+
+        /* Remove option — softer coral, less alarming than Delete List */
+        .dropdown-editor-btn.remove-opt {
+            background: #e8694a;
+            color: white;
+        }
+        .dropdown-editor-btn.remove-opt:hover {
+            background: #c9522f;
         }
 
         .dropdown-editor-btn.remove:disabled,
+        .dropdown-editor-btn.remove-opt:disabled,
         .dropdown-editor-btn.remove-comment:disabled {
             background: #ccc;
             cursor: not-allowed;
             opacity: 0.6;
         }
-
         .dropdown-editor-btn.remove:disabled:hover,
+        .dropdown-editor-btn.remove-opt:disabled:hover,
         .dropdown-editor-btn.remove-comment:disabled:hover {
             background: #ccc;
         }
@@ -370,7 +382,6 @@
             color: white;
             width: 100%;
         }
-
         .dropdown-editor-btn.add:hover {
             background: #218838;
         }
@@ -3729,17 +3740,21 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 const card = document.createElement('div');
                 card.className = 'dropdown-editor';
                 card.style.marginTop = '10px';
-                card.draggable = true;
                 card.dataset.listIdx = listIdx;
+                // draggable is NOT set on the card itself — only the handle enables it
 
                 // ── List card drag events ──
                 card.addEventListener('dragstart', e => {
+                    // Only allow drag if it originated from the handle
+                    if (!card.dataset.dragEnabled) { e.preventDefault(); return; }
                     dragSrcListIdx = listIdx;
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', listIdx);
                     setTimeout(() => card.classList.add('dragging-item'), 0);
                 });
                 card.addEventListener('dragend', () => {
+                    card.draggable = false;
+                    delete card.dataset.dragEnabled;
                     card.classList.remove('dragging-item');
                     container.querySelectorAll('.dropdown-editor').forEach(c => c.classList.remove('drag-over-card'));
                 });
@@ -3771,6 +3786,11 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 listDragHandle.className = 'list-card-drag-handle';
                 listDragHandle.textContent = '⠿';
                 listDragHandle.title = 'Drag to reorder list';
+                // Only enable card dragging when the user grabs the handle
+                listDragHandle.addEventListener('mousedown', () => {
+                    card.draggable = true;
+                    card.dataset.dragEnabled = '1';
+                });
 
                 const nameInput = document.createElement('input');
                 nameInput.type = 'text';
@@ -3782,8 +3802,6 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     list.name = nameInput.value;
                     saveDataToStorage();
                 });
-                // Prevent drag from firing when typing in the name input
-                nameInput.addEventListener('mousedown', e => e.stopPropagation());
 
                 // ── Type toggle: Dropdown ↔ Text ──
                 const typeToggleWrap = document.createElement('div');
@@ -3852,18 +3870,21 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     list.options.forEach((opt, optIdx) => {
                         const item = document.createElement('div');
                         item.className = 'dropdown-editor-item';
-                        item.draggable = true;
                         item.dataset.optIdx = optIdx;
+                        // draggable NOT set here — only the handle enables it
 
                         // Option drag events
                         item.addEventListener('dragstart', e => {
+                            if (!item.dataset.dragEnabled) { e.preventDefault(); return; }
                             dragSrcOptIdx = optIdx;
                             e.dataTransfer.effectAllowed = 'move';
                             e.dataTransfer.setData('text/plain', optIdx);
-                            e.stopPropagation(); // don't bubble to card drag
+                            e.stopPropagation();
                             setTimeout(() => item.classList.add('dragging-item'), 0);
                         });
                         item.addEventListener('dragend', () => {
+                            item.draggable = false;
+                            delete item.dataset.dragEnabled;
                             item.classList.remove('dragging-item');
                             optionsList.querySelectorAll('.dropdown-editor-item').forEach(i => i.classList.remove('drag-over-item'));
                         });
@@ -3895,19 +3916,22 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                         optHandle.className = 'drag-handle';
                         optHandle.textContent = '⠿';
                         optHandle.title = 'Drag to reorder';
+                        optHandle.addEventListener('mousedown', () => {
+                            item.draggable = true;
+                            item.dataset.dragEnabled = '1';
+                        });
 
                         const optInput = document.createElement('input');
                         optInput.type = 'text';
                         optInput.className = 'dropdown-editor-input';
                         optInput.value = opt;
-                        optInput.addEventListener('mousedown', e => e.stopPropagation());
                         optInput.addEventListener('input', () => {
                             list.options[optIdx] = optInput.value;
                             saveDataToStorage();
                         });
 
                         const removeOptBtn = document.createElement('button');
-                        removeOptBtn.className = 'dropdown-editor-btn remove';
+                        removeOptBtn.className = 'dropdown-editor-btn remove-opt';
                         removeOptBtn.textContent = 'Remove';
                         removeOptBtn.disabled = isOnlyOpt;
                         if (isOnlyOpt) removeOptBtn.title = 'At least one option must remain';
@@ -9314,10 +9338,19 @@ self.addEventListener('fetch', e => {
             if (!activeLines.length) return;
 
             const shortSide = Math.min(canvas.width, canvas.height);
-            const fontSize  = Math.max(14, Math.round(shortSide * 0.042));
-            const lineH     = fontSize * 1.5;
             const pad       = Math.round(shortSide * 0.025);
-            const barH      = Math.max(lineH * (activeLines.length + 0.8), shortSide * 0.08);
+
+            // Scale font down as more lines are active — keeps the bar from dominating the photo.
+            // Base size fits 2 lines comfortably; shrink proportionally beyond that, min 10px.
+            const BASE_LINES = 2;
+            const baseSize   = Math.max(10, Math.round(shortSide * 0.042));
+            const scale      = activeLines.length > BASE_LINES
+                               ? BASE_LINES / activeLines.length
+                               : 1;
+            const fontSize   = Math.max(10, Math.round(baseSize * scale));
+
+            const lineH      = fontSize * 1.5;
+            const barH       = lineH * (activeLines.length + 0.8);
 
             ctx.fillStyle = 'rgba(0,0,0,0.70)';
             ctx.fillRect(0, canvas.height - barH, canvas.width, barH);
