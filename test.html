@@ -278,6 +278,46 @@
             background: white;
             border: 1px solid #e1e5e9;
             border-radius: 8px;
+            transition: box-shadow 0.15s ease, opacity 0.15s ease;
+        }
+
+        /* Drag handle for both options and list cards */
+        .drag-handle {
+            cursor: grab;
+            color: #bbb;
+            font-size: 18px;
+            line-height: 1;
+            padding: 0 2px;
+            user-select: none;
+            flex-shrink: 0;
+            transition: color 0.15s;
+        }
+        .drag-handle:hover { color: #667eea; }
+        .drag-handle:active { cursor: grabbing; }
+
+        /* List card drag handle sits in the header row */
+        .list-card-drag-handle {
+            cursor: grab;
+            color: #bbb;
+            font-size: 20px;
+            line-height: 1;
+            padding: 0 4px;
+            user-select: none;
+            flex-shrink: 0;
+            transition: color 0.15s;
+        }
+        .list-card-drag-handle:hover { color: #667eea; }
+        .list-card-drag-handle:active { cursor: grabbing; }
+
+        /* Dragging states */
+        .dragging-item {
+            opacity: 0.4;
+        }
+        .drag-over-item {
+            box-shadow: 0 0 0 2px #667eea;
+        }
+        .drag-over-card {
+            box-shadow: 0 0 0 2px #667eea, 0 4px 12px rgba(102,126,234,0.15);
         }
 
         .dropdown-editor-input {
@@ -3680,16 +3720,57 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             container.innerHTML = '';
             const lists = getEcsDropdownLists();
 
+            // ── Drag state for list cards ──
+            let dragSrcListIdx = null;
+
             lists.forEach((list, listIdx) => {
                 const isOnly = lists.length <= 1;
 
                 const card = document.createElement('div');
                 card.className = 'dropdown-editor';
                 card.style.marginTop = '10px';
+                card.draggable = true;
+                card.dataset.listIdx = listIdx;
 
-                // ── List header row: name input + delete list button ──
+                // ── List card drag events ──
+                card.addEventListener('dragstart', e => {
+                    dragSrcListIdx = listIdx;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', listIdx);
+                    setTimeout(() => card.classList.add('dragging-item'), 0);
+                });
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging-item');
+                    container.querySelectorAll('.dropdown-editor').forEach(c => c.classList.remove('drag-over-card'));
+                });
+                card.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    container.querySelectorAll('.dropdown-editor').forEach(c => c.classList.remove('drag-over-card'));
+                    if (dragSrcListIdx !== listIdx) card.classList.add('drag-over-card');
+                });
+                card.addEventListener('dragleave', () => card.classList.remove('drag-over-card'));
+                card.addEventListener('drop', e => {
+                    e.preventDefault();
+                    card.classList.remove('drag-over-card');
+                    const fromIdx = dragSrcListIdx;
+                    const toIdx   = listIdx;
+                    if (fromIdx === null || fromIdx === toIdx) return;
+                    // Reorder lists array
+                    const moved = appState.ecsDropdownLists.splice(fromIdx, 1)[0];
+                    appState.ecsDropdownLists.splice(toIdx, 0, moved);
+                    saveDataToStorage();
+                    renderEcsDropdownListsEditor();
+                });
+
+                // ── List header row: drag handle + name input + delete button ──
                 const headerRow = document.createElement('div');
                 headerRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:12px;';
+
+                const listDragHandle = document.createElement('span');
+                listDragHandle.className = 'list-card-drag-handle';
+                listDragHandle.textContent = '⠿';
+                listDragHandle.title = 'Drag to reorder list';
 
                 const nameInput = document.createElement('input');
                 nameInput.type = 'text';
@@ -3701,6 +3782,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     list.name = nameInput.value;
                     saveDataToStorage();
                 });
+                // Prevent drag from firing when typing in the name input
+                nameInput.addEventListener('mousedown', e => e.stopPropagation());
 
                 const deleteListBtn = document.createElement('button');
                 deleteListBtn.className = 'dropdown-editor-btn remove';
@@ -3713,32 +3796,77 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                         return;
                     }
                     appState.ecsDropdownLists.splice(listIdx, 1);
-                    // Clean up stored data for this list
                     if (appState.ecsExtraData) delete appState.ecsExtraData[list.id];
                     saveDataToStorage();
                     renderEcsDropdownListsEditor();
                 });
 
+                headerRow.appendChild(listDragHandle);
                 headerRow.appendChild(nameInput);
                 headerRow.appendChild(deleteListBtn);
                 card.appendChild(headerRow);
 
-                // ── Options list ──
+                // ── Options list with per-option drag ──
                 const optionsList = document.createElement('div');
                 optionsList.className = 'dropdown-editor-list';
                 optionsList.style.marginBottom = '10px';
+
+                let dragSrcOptIdx = null;
 
                 const renderOptions = () => {
                     optionsList.innerHTML = '';
                     list.options.forEach((opt, optIdx) => {
                         const item = document.createElement('div');
                         item.className = 'dropdown-editor-item';
+                        item.draggable = true;
+                        item.dataset.optIdx = optIdx;
+
+                        // Option drag events
+                        item.addEventListener('dragstart', e => {
+                            dragSrcOptIdx = optIdx;
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', optIdx);
+                            e.stopPropagation(); // don't bubble to card drag
+                            setTimeout(() => item.classList.add('dragging-item'), 0);
+                        });
+                        item.addEventListener('dragend', () => {
+                            item.classList.remove('dragging-item');
+                            optionsList.querySelectorAll('.dropdown-editor-item').forEach(i => i.classList.remove('drag-over-item'));
+                        });
+                        item.addEventListener('dragover', e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.dataTransfer.dropEffect = 'move';
+                            optionsList.querySelectorAll('.dropdown-editor-item').forEach(i => i.classList.remove('drag-over-item'));
+                            if (dragSrcOptIdx !== optIdx) item.classList.add('drag-over-item');
+                        });
+                        item.addEventListener('dragleave', () => item.classList.remove('drag-over-item'));
+                        item.addEventListener('drop', e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            item.classList.remove('drag-over-item');
+                            const fromOpt = dragSrcOptIdx;
+                            const toOpt   = optIdx;
+                            if (fromOpt === null || fromOpt === toOpt) return;
+                            const moved = list.options.splice(fromOpt, 1)[0];
+                            list.options.splice(toOpt, 0, moved);
+                            saveDataToStorage();
+                            renderOptions();
+                        });
+
                         const isOnlyOpt = list.options.length <= 1;
+
+                        // Drag handle for the option row
+                        const optHandle = document.createElement('span');
+                        optHandle.className = 'drag-handle';
+                        optHandle.textContent = '⠿';
+                        optHandle.title = 'Drag to reorder';
 
                         const optInput = document.createElement('input');
                         optInput.type = 'text';
                         optInput.className = 'dropdown-editor-input';
                         optInput.value = opt;
+                        optInput.addEventListener('mousedown', e => e.stopPropagation());
                         optInput.addEventListener('input', () => {
                             list.options[optIdx] = optInput.value;
                             saveDataToStorage();
@@ -3759,6 +3887,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                             renderOptions();
                         });
 
+                        item.appendChild(optHandle);
                         item.appendChild(optInput);
                         item.appendChild(removeOptBtn);
                         optionsList.appendChild(item);
