@@ -281,6 +281,12 @@
             transition: box-shadow 0.15s ease, opacity 0.15s ease;
         }
 
+        /* Inner list cards share the same light grey as option rows */
+        .dropdown-editor.dropdown-editor-card {
+            background: #f8f9fa;
+            margin-top: 14px;
+        }
+
         /* Drag handle for both options and list cards */
         .drag-handle {
             cursor: grab;
@@ -3736,7 +3742,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 const isOnly = lists.length <= 1;
 
                 const card = document.createElement('div');
-                card.className = 'dropdown-editor';
+                card.className = 'dropdown-editor dropdown-editor-card';
                 card.style.marginTop = '10px';
                 card.dataset.listIdx = listIdx;
                 // draggable is NOT set on the card itself — only the handle enables it
