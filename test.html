@@ -252,12 +252,10 @@
         /* PC-only Dropdown Editor Styles */
         .dropdown-editor {
             margin-top: 14px;
-            padding: 16px 16px 14px 18px;
-            background: #ffffff;
+            padding: 16px 16px 14px 16px;
+            background: #eaeced;
             border-radius: 10px;
-            border: 1px solid #dde1e7;
-            border-left: 4px solid #667eea;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            border: 2px solid #e1e5e9;
         }
 
         .dropdown-editor h3 {
@@ -277,7 +275,7 @@
             align-items: center;
             gap: 10px;
             padding: 8px 10px;
-            background: #f8f9fc;
+            background: #f8f9fa;
             border: 1px solid #e1e5e9;
             border-radius: 8px;
             transition: box-shadow 0.15s ease, opacity 0.15s ease;
@@ -8377,8 +8375,8 @@ function renderFlexBarcodeRows() {
             const rawLines = [];
             rawLines.push({ text: `Room: ${roomName}   ECS: ${ecsCode}`, bold: true,  color: '#ffffff', small: false });
             const info = [statusText, commentText].filter(s => s && s.trim());
-            if (info.length) rawLines.push({ text: info.join('   |   '), bold: false, color: '#90EE90', small: false });
-            rawLines.push({ text: formatDateTime(new Date()), bold: false, color: '#cccccc', small: true });
+            if (info.length) rawLines.push({ text: info.join('   |   '), bold: false, color: '#ffffff', small: false });
+            rawLines.push({ text: formatDateTime(new Date()), bold: false, color: '#ffffff', small: true });
 
             // Measure first — shrink font until every line fits, then draw
             const resolvedLines = rawLines.map(line => {
@@ -9236,7 +9234,7 @@ self.addEventListener('fetch', e => {
         const infoText = [statusText, commentText].filter(s => s && s.trim()).join('   |   ');
         const lines = [
             { id: 'line-room',  label: 'Location', text: `Room: ${roomName}   ECS: ${ecsCode}`, on: true,  bold: true,  color: '#ffffff' },
-            { id: 'line-info',  label: 'Status',   text: infoText,                               on: !!infoText, bold: false, color: '#90EE90' },
+            { id: 'line-info',  label: 'Status',   text: infoText,                               on: !!infoText, bold: false, color: '#ffffff' },
         ];
 
         // Add extra fields as optional lines — off by default to avoid clutter
@@ -9248,13 +9246,13 @@ self.addEventListener('fetch', e => {
                     text: `${field.label}: ${field.value}`,
                     on: false,   // OFF by default — user opts in
                     bold: false,
-                    color: '#FFD580',  // amber — visually distinct from status (green) and time (grey)
+                    color: '#ffffff',
                     small: true
                 });
             }
         });
 
-        lines.push({ id: 'line-time', label: 'DateTime', text: formatDateTime(new Date()), on: true, bold: false, color: '#cccccc', small: true });
+        lines.push({ id: 'line-time', label: 'DateTime', text: formatDateTime(new Date()), on: true, bold: false, color: '#ffffff', small: true });
 
         _stampEditorState = { rawDataUrl, lines, onSave, onRetake };
 
