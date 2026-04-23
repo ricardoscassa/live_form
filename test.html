@@ -2302,6 +2302,8 @@
     background: #111;
 }
 
+
+
 /* Stamp lines editor */
 .stamp-lines-editor {
     width: 100%;
@@ -2311,6 +2313,51 @@
     flex-direction: column;
     gap: 10px;
     flex-shrink: 0;
+}
+
+/* + Add line button inside stamp editor */
+.stamp-add-line-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 2px 0 4px;
+}
+.stamp-add-line-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    padding: 4px 2px;
+}
+.stamp-add-line-btn:hover .stamp-add-circle { background: #248a3d; }
+.stamp-add-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #34c759;
+    flex-shrink: 0;
+    position: relative;
+    transition: background 0.15s, transform 0.1s;
+}
+.stamp-add-line-btn:active .stamp-add-circle { transform: scale(0.88); }
+.stamp-add-circle::before,
+.stamp-add-circle::after {
+    content: '';
+    position: absolute;
+    background: #fff;
+    border-radius: 2px;
+}
+.stamp-add-circle::before { width: 11px; height: 2px; }
+.stamp-add-circle::after  { width: 2px; height: 11px; }
+.stamp-add-line-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #34c759;
 }
 
 .stamp-line-row {
@@ -3222,6 +3269,14 @@ Room Codes (Room- Codes)
         <!-- Editable stamp lines -->
         <div class="stamp-lines-editor" id="stampLinesEditor">
             <!-- Lines injected by JS -->
+        </div>
+        <!-- Add custom line button -->
+        <div class="stamp-add-line-row" style="width:100%;max-width:600px;padding:0 12px;">
+            <button class="stamp-add-line-btn" id="stampAddLineBtn" type="button">
+                <span class="stamp-add-circle"></span>
+                <span class="stamp-add-line-label">Add line</span>
+            </button>
+        </div>
         </div>
 
         <!-- Save / Retake -->
@@ -9343,55 +9398,23 @@ self.addEventListener('fetch', e => {
         // Build editor rows
         editor.innerHTML = '';
         lines.forEach((line, i) => {
-            const row = document.createElement('div');
-            row.className = 'stamp-line-row' + (line.on ? '' : ' disabled');
-            row.id = `stamp-row-${i}`;
-
-            // Toggle
-            const toggleWrap = document.createElement('label');
-            toggleWrap.className = 'stamp-toggle';
-            const chk = document.createElement('input');
-            chk.type = 'checkbox';
-            chk.checked = line.on;
-            chk.addEventListener('change', () => {
-                line.on = chk.checked;
-                row.classList.toggle('disabled', !line.on);
-                inp.disabled = !line.on;
-                renderStampPreview(canvas, lines, rawDataUrl);
-            });
-            const track = document.createElement('div');
-            track.className = 'stamp-toggle-track';
-            const thumb = document.createElement('div');
-            thumb.className = 'stamp-toggle-thumb';
-            toggleWrap.appendChild(chk);
-            toggleWrap.appendChild(track);
-            toggleWrap.appendChild(thumb);
-
-            // Text input
-            const inp = document.createElement('input');
-            inp.type = 'text';
-            inp.className = 'stamp-line-input';
-            inp.value = line.text;
-            inp.disabled = !line.on;
-            inp.placeholder = line.label;
-            inp.addEventListener('input', () => {
-                line.text = inp.value;
-                renderStampPreview(canvas, lines, rawDataUrl);
-            });
-
-            // Label
-            const lbl = document.createElement('span');
-            lbl.className = 'stamp-line-label';
-            lbl.textContent = line.label;
-
-            row.appendChild(toggleWrap);
-            row.appendChild(inp);
-            row.appendChild(lbl);
-            editor.appendChild(row);
+            _buildStampLineRow(line, canvas, lines, rawDataUrl);
         });
 
-        // Initial preview render
+        // Wire + Add line button
+        const addLineBtn = document.getElementById('stampAddLineBtn');
+        if (addLineBtn) {
+            addLineBtn.onclick = () => {
+                const newLine = { id: `line-custom-${Date.now()}`, label: 'Custom', text: '', on: true, bold: false, color: '#ffffff', small: false };
+                _stampEditorState.lines.push(newLine);
+                _buildStampLineRow(newLine, canvas, _stampEditorState.lines, rawDataUrl);
+                renderStampPreview(canvas, _stampEditorState.lines, rawDataUrl);
+            };
+        }
+
         renderStampPreview(canvas, lines, rawDataUrl);
+
+        _stampEditorState._savedScrollY = window.scrollY;
 
         // Save scroll position so closing the editor returns user to same spot
         _stampEditorState._savedScrollY = window.scrollY;
@@ -9402,6 +9425,93 @@ self.addEventListener('fetch', e => {
     /**
      * Render the photo + active stamp lines onto the preview canvas.
      */
+    /** Build one editor row and append it to stampLinesEditor */
+    function _buildStampLineRow(line, canvas, lines, rawDataUrl) {
+        const editor = document.getElementById('stampLinesEditor');
+        const row = document.createElement('div');
+        row.className = 'stamp-line-row' + (line.on ? '' : ' disabled');
+        row.style.cursor = 'default';
+
+        // ── Drag handle (grip dots) — reorder lines ──
+        const grip = document.createElement('span');
+        grip.style.cssText = 'cursor:grab;color:#636366;font-size:15px;line-height:1;padding:0 2px;flex-shrink:0;user-select:none;';
+        grip.textContent = '⠿';
+        grip.title = 'Drag to reorder';
+
+        // Drag-to-reorder: only active when grabbing the handle
+        grip.addEventListener('mousedown', () => { row.draggable = true; row.dataset.dragEnabled = '1'; });
+        row.addEventListener('dragend', () => { row.draggable = false; delete row.dataset.dragEnabled; row.style.opacity = ''; editor.querySelectorAll('.stamp-line-row').forEach(r => r.style.outline = ''); });
+        row.addEventListener('dragstart', e => {
+            if (!row.dataset.dragEnabled) { e.preventDefault(); return; }
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => { row.style.opacity = '0.4'; }, 0);
+        });
+        row.addEventListener('dragover', e => {
+            e.preventDefault();
+            editor.querySelectorAll('.stamp-line-row').forEach(r => r.style.outline = '');
+            row.style.outline = '2px solid #34C759';
+        });
+        row.addEventListener('drop', e => {
+            e.preventDefault();
+            row.style.outline = '';
+            // Find dragged row
+            const rows = [...editor.querySelectorAll('.stamp-line-row')];
+            const draggedRow = rows.find(r => r.style.opacity === '0.4' || r.dataset.dragEnabled);
+            if (!draggedRow || draggedRow === row) return;
+            const fromIdx = rows.indexOf(draggedRow);
+            const toIdx   = rows.indexOf(row);
+            if (fromIdx === -1 || toIdx === -1) return;
+            // Reorder lines array
+            const moved = lines.splice(fromIdx, 1)[0];
+            lines.splice(toIdx, 0, moved);
+            // Rebuild editor
+            editor.innerHTML = '';
+            lines.forEach(l => _buildStampLineRow(l, canvas, lines, rawDataUrl));
+            renderStampPreview(canvas, lines, rawDataUrl);
+        });
+
+        const toggleWrap = document.createElement('label');
+        toggleWrap.className = 'stamp-toggle';
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.checked = line.on;
+        chk.addEventListener('change', () => {
+            line.on = chk.checked;
+            row.classList.toggle('disabled', !line.on);
+            inp.disabled = !line.on;
+            renderStampPreview(canvas, lines, rawDataUrl);
+        });
+        const track = document.createElement('div');
+        track.className = 'stamp-toggle-track';
+        const thumb = document.createElement('div');
+        thumb.className = 'stamp-toggle-thumb';
+        toggleWrap.appendChild(chk);
+        toggleWrap.appendChild(track);
+        toggleWrap.appendChild(thumb);
+
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'stamp-line-input';
+        inp.value = line.text;
+        inp.disabled = !line.on;
+        inp.placeholder = line.label || 'Text';
+        inp.addEventListener('input', () => {
+            line.text = inp.value;
+            renderStampPreview(canvas, lines, rawDataUrl);
+        });
+
+        const lbl = document.createElement('span');
+        lbl.className = 'stamp-line-label';
+        lbl.textContent = line.label || '';
+
+        row.appendChild(grip);
+        row.appendChild(toggleWrap);
+        row.appendChild(inp);
+        row.appendChild(lbl);
+        editor.appendChild(row);
+    }
+
+    /** Wire the drag handle on the preview canvas to reposition the stamp bar */
     function renderStampPreview(canvas, lines, rawDataUrl) {
         const img = new Image();
         img.onload = function() {
