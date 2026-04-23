@@ -9416,42 +9416,59 @@ self.addEventListener('fetch', e => {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            const activeLines = lines.filter(l => l.on && l.text.trim());
-            if (!activeLines.length) return;
+            // ── Separate location/status/time from extra fields ──────────────
+            // Extra fields (line-extra-*) are paired two-per-line to keep the
+            // bar compact. All other lines render as normal single lines.
+            const allActive = lines.filter(l => l.on && l.text.trim());
+            if (!allActive.length) return;
+
+            const extraActive  = allActive.filter(l => l.id && l.id.startsWith('line-extra'));
+            const normalActive = allActive.filter(l => !l.id || !l.id.startsWith('line-extra'));
+
+            // Pair extras: [ [a,b], [c,d], [e] ]
+            const extraPairs = [];
+            for (let i = 0; i < extraActive.length; i += 2) {
+                extraPairs.push(extraActive.slice(i, i + 2));
+            }
+
+            // Final render lines: normal lines + paired extra lines
+            const renderLines = [
+                ...normalActive,
+                ...extraPairs.map(pair => ({
+                    text: pair.map(f => f.text).join('   |   '),
+                    bold: false,
+                    color: '#ffffff',
+                    small: true,
+                    fSizeOverride: null
+                }))
+            ];
 
             const shortSide = Math.min(canvas.width, canvas.height);
             const pad       = Math.round(shortSide * 0.025);
+            const maxW      = canvas.width - pad * 2;
 
-            // Scale font down as more lines are active — keeps the bar from dominating the photo.
-            // Base size fits 2 lines comfortably; shrink proportionally beyond that, min 10px.
-            const BASE_LINES = 2;
-            const baseSize   = Math.max(10, Math.round(shortSide * 0.042));
-            const scale      = activeLines.length > BASE_LINES
-                               ? BASE_LINES / activeLines.length
-                               : 1;
-            const fontSize   = Math.max(10, Math.round(baseSize * scale));
-
-            const lineH      = fontSize * 1.5;
-            const barH       = lineH * (activeLines.length + 0.8);
+            // Original font size — unchanged from before
+            const fontSize  = Math.max(14, Math.round(shortSide * 0.042));
+            const lineH     = fontSize * 1.5;
+            const barH      = Math.max(lineH * (renderLines.length + 0.8), shortSide * 0.08);
 
             ctx.fillStyle = 'rgba(0,0,0,0.70)';
             ctx.fillRect(0, canvas.height - barH, canvas.width, barH);
             ctx.textBaseline = 'middle';
 
-            const previewMaxW = canvas.width - pad * 2;
-            const previewMin  = 10;
-            const resolvedPrev = activeLines.map(line => {
+            const minSize = 10;
+            const resolved = renderLines.map(line => {
                 let fSize = line.small ? Math.round(fontSize * 0.82) : fontSize;
                 ctx.font = `${line.bold ? 'bold' : 'normal'} ${fSize}px Arial, sans-serif`;
-                while (ctx.measureText(line.text).width > previewMaxW && fSize > previewMin) {
+                while (ctx.measureText(line.text).width > maxW && fSize > minSize) {
                     fSize -= 0.5;
                     ctx.font = `${line.bold ? 'bold' : 'normal'} ${fSize}px Arial, sans-serif`;
                 }
                 return { ...line, fSize };
             });
-            resolvedPrev.forEach((line, i) => {
+            resolved.forEach((line, i) => {
                 ctx.font = `${line.bold ? 'bold' : 'normal'} ${line.fSize}px Arial, sans-serif`;
-                ctx.fillStyle = line.color;
+                ctx.fillStyle = line.color || '#ffffff';
                 ctx.fillText(line.text, pad, canvas.height - barH + lineH * (i + 0.6));
             });
         };
