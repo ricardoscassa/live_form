@@ -3277,7 +3277,6 @@ Room Codes (Room- Codes)
                 <span class="stamp-add-line-label">Add line</span>
             </button>
         </div>
-        </div>
 
         <!-- Save / Retake -->
         <div class="stamp-editor-actions">
@@ -9414,9 +9413,6 @@ self.addEventListener('fetch', e => {
 
         renderStampPreview(canvas, lines, rawDataUrl);
 
-        _stampEditorState._savedScrollY = window.scrollY;
-
-        // Save scroll position so closing the editor returns user to same spot
         _stampEditorState._savedScrollY = window.scrollY;
 
         modal.classList.add('active');
