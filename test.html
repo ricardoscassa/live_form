@@ -9321,10 +9321,12 @@ self.addEventListener('fetch', e => {
             { id: 'line-info',  label: 'Status',   text: infoText,                               on: !!infoText, bold: false, color: '#ffffff' },
         ];
 
-        // Add extra fields as optional lines — off by default to avoid clutter
+        lines.push({ id: 'line-time', label: 'DateTime', text: formatDateTime(new Date()), on: true, bold: false, color: '#ffffff', small: true });
+
+        // Add extra fields as optional lines — off by default, inserted above the timestamp
         (extraFields || []).forEach((field, i) => {
             if (field.value && field.value.trim()) {
-                lines.push({
+                lines.splice(lines.length - 1, 0, {
                     id: `line-extra-${i}`,
                     label: field.label,
                     text: `${field.label}: ${field.value}`,
@@ -9335,8 +9337,6 @@ self.addEventListener('fetch', e => {
                 });
             }
         });
-
-        lines.push({ id: 'line-time', label: 'DateTime', text: formatDateTime(new Date()), on: true, bold: false, color: '#ffffff', small: true });
 
         _stampEditorState = { rawDataUrl, lines, onSave, onRetake };
 
