@@ -8478,11 +8478,21 @@ function renderFlexBarcodeRows() {
             const commentText = (appState.codeSpecificComments && appState.codeSpecificComments[uniqueCodeId])
                 ? appState.codeSpecificComments[uniqueCodeId] : '';
 
+            // Collect extra list values (lists[2], lists[3], …)
+            const extraFields = [];
+            if (typeof getEcsDropdownLists === 'function') {
+                const allLists = getEcsDropdownLists();
+                allLists.slice(2).forEach(list => {
+                    const val = (appState.ecsExtraData && appState.ecsExtraData[list.id] && appState.ecsExtraData[list.id][uniqueCodeId]) || '';
+                    if (val) extraFields.push({ label: list.name, value: val });
+                });
+            }
+
             const reader = new FileReader();
             reader.onload = function(ev) {
                 // Open stamp editor — let user review/edit before saving
                 openStampEditor(ev.target.result, uniqueCodeId, roomName, ecsCode,
-                    statusText, commentText,
+                    statusText, commentText, extraFields,
                     async (finalDataUrl) => {
                         // onSave callback
                         try {
@@ -8888,7 +8898,7 @@ function renderFlexBarcodeRows() {
             const reader = new FileReader();
             reader.onload = function(ev) {
                 openStampEditor(ev.target.result, codeId, roomName, ecsCode,
-                    statusText, commentText,
+                    statusText, commentText, [],
                     async (finalDataUrl) => {
                         try {
                             await savePhoto(codeId, roomName, ecsCode, finalDataUrl);
@@ -9069,7 +9079,7 @@ function renderFlexBarcodeRows() {
             const reader = new FileReader();
             reader.onload = function(ev) {
                 openStampEditor(ev.target.result, codeId, stampRoom, stampEcs,
-                    stampStatus, stampComment,
+                    stampStatus, stampComment, [],
                     async (finalDataUrl) => {
                         try {
                             await savePhoto(codeId, stampRoom, stampEcs, finalDataUrl);
@@ -9190,7 +9200,9 @@ self.addEventListener('fetch', e => {
      * @param {Function} onRetake     - called when user wants to retake
      */
     function openStampEditor(rawDataUrl, codeId, roomName, ecsCode,
-                             statusText, commentText, onSave, onRetake) {
+                             statusText, commentText, extraFields, onSave, onRetake) {
+
+        // extraFields: [{label, value}, ...] — shown as optional lines, off by default
 
         const modal   = document.getElementById('stampEditorModal');
         const canvas  = document.getElementById('stampPreviewCanvas');
@@ -9201,8 +9213,24 @@ self.addEventListener('fetch', e => {
         const lines = [
             { id: 'line-room',  label: 'Location', text: `Room: ${roomName}   ECS: ${ecsCode}`, on: true,  bold: true,  color: '#ffffff' },
             { id: 'line-info',  label: 'Status',   text: infoText,                               on: !!infoText, bold: false, color: '#90EE90' },
-            { id: 'line-time',  label: 'DateTime', text: formatDateTime(new Date()),             on: true,  bold: false, color: '#cccccc', small: true },
         ];
+
+        // Add extra fields as optional lines — off by default to avoid clutter
+        (extraFields || []).forEach((field, i) => {
+            if (field.value && field.value.trim()) {
+                lines.push({
+                    id: `line-extra-${i}`,
+                    label: field.label,
+                    text: `${field.label}: ${field.value}`,
+                    on: false,   // OFF by default — user opts in
+                    bold: false,
+                    color: '#FFD580',  // amber — visually distinct from status (green) and time (grey)
+                    small: true
+                });
+            }
+        });
+
+        lines.push({ id: 'line-time', label: 'DateTime', text: formatDateTime(new Date()), on: true, bold: false, color: '#cccccc', small: true });
 
         _stampEditorState = { rawDataUrl, lines, onSave, onRetake };
 
