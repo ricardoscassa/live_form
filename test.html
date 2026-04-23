@@ -3187,6 +3187,39 @@ rooms: [],
             ecsQuickEntryMode: false
         };
 
+        // Returns a complete blank appState — single source of truth for resets and imports.
+        // Any new top-level field added to appState must also be added here.
+        function getCleanAppState() {
+            return {
+                rooms: [],
+                currentRoomIndex: 0,
+                checkData: {},
+                roomStatus: {},
+                isInspectionMode: false,
+                roomCodes: {},
+                currentCodeRoomIndex: 0,
+                codeSpecificComments: {},
+                seStSvRooms: [],
+                currentSeStSvRoomIndex: 0,
+                seStSvData: {},
+                customStatusOptions: [],
+                customCommentOptions: [],
+                ecsDropdownLists: [],
+                ecsExtraData: {},
+                ecsQuickEntryMode: false,
+                ecsQuickEntryState: {},
+                assetTagz2: {
+                    roomCodes: {}, currentRoomIndex: 0, statusByCodeId: {},
+                    commentsByCodeId: {}, barcodesByCodeId: {}, barcodePresets: []
+                },
+                flexibleInspections: {
+                    rooms: [], currentRoomIndex: 0, unassignedBarcodes: [],
+                    assignments: {}, inspections: [], ecsPresets: [], locks: {},
+                    poolVisibleCount: 10, isFlexibleMode: false
+                }
+            };
+        }
+
         // Default comment choices for ECS Inspection
         const defaultCommentOptions = [
             "New Comment",
@@ -6527,59 +6560,86 @@ barcodeWrapper.appendChild(barcodeInput);
 
         function confirmReset() {
             const type = document.getElementById('resetModal').dataset.type;
-            
+
             // Always clear photos from IndexedDB on any reset type
             if (typeof clearAllPhotos === 'function') clearAllPhotos();
 
+            const clean = getCleanAppState();
+
             if (type === 'site') {
-                appState.rooms = [];
-                appState.checkData = {};
-                appState.roomStatus = {};
+                // Clear only EA inspection fields; leave other modes untouched
+                appState.rooms              = clean.rooms;
+                appState.checkData          = clean.checkData;
+                appState.roomStatus         = clean.roomStatus;
+                appState.currentRoomIndex   = clean.currentRoomIndex;
+                appState.isInspectionMode   = clean.isInspectionMode;
                 roomListTextarea.value = '';
+
             } else if (type === 'code') {
-                appState.roomCodes = {};
-                appState.codeSpecificComments = {};
-                appState.ecsExtraData = {};
+                // Clear ECS inspection fields + dropdown config
+                appState.roomCodes              = clean.roomCodes;
+                appState.currentCodeRoomIndex   = clean.currentCodeRoomIndex;
+                appState.checkData              = clean.checkData;
+                appState.codeSpecificComments   = clean.codeSpecificComments;
+                appState.ecsExtraData           = clean.ecsExtraData;
+                appState.ecsDropdownLists       = clean.ecsDropdownLists;
+                appState.customStatusOptions    = clean.customStatusOptions;
+                appState.customCommentOptions   = clean.customCommentOptions;
+                appState.ecsQuickEntryMode      = clean.ecsQuickEntryMode;
+                appState.ecsQuickEntryState     = clean.ecsQuickEntryState;
+                appState.roomStatus             = clean.roomStatus;
+                appState.isInspectionMode       = clean.isInspectionMode;
                 codeListTextarea.value = '';
+
             } else if (type === 'assetTagz2') {
-                appState.assetTagz2 = { roomCodes: {}, currentRoomIndex: 0, statusByCodeId: {}, commentsByCodeId: {}, barcodesByCodeId: {}, barcodePresets: [] };
+                appState.assetTagz2     = clean.assetTagz2;
+                appState.roomStatus     = clean.roomStatus;
+                appState.isInspectionMode = clean.isInspectionMode;
                 if (typeof assetTagz2CodeListTextarea !== 'undefined' && assetTagz2CodeListTextarea) assetTagz2CodeListTextarea.value = '';
                 if (typeof assetTagz2BarcodePresetsTextarea !== 'undefined' && assetTagz2BarcodePresetsTextarea) assetTagz2BarcodePresetsTextarea.value = '';
+
             } else if (type === 'flex') {
-                appState.flexibleInspections = {
-                    rooms: [], currentRoomIndex: 0, unassignedBarcodes: [], assignments: {}, inspections: [], ecsPresets: [], locks: {}, poolVisibleCount: 10, isFlexibleMode: false
-                };
+                appState.flexibleInspections = clean.flexibleInspections;
+                appState.roomStatus          = clean.roomStatus;
+                appState.isInspectionMode    = clean.isInspectionMode;
                 if (typeof flexRoomListTextarea !== 'undefined') flexRoomListTextarea.value = '';
                 if (typeof flexBarcodeListTextarea !== 'undefined') flexBarcodeListTextarea.value = '';
+
             } else if (type === 'seStSv') {
-                appState.seStSvRooms = [];
-                appState.seStSvData = {}; 
+                appState.seStSvRooms            = clean.seStSvRooms;
+                appState.currentSeStSvRoomIndex = clean.currentSeStSvRoomIndex;
+                appState.seStSvData             = clean.seStSvData;
+                appState.roomStatus             = clean.roomStatus;
+                appState.isInspectionMode       = clean.isInspectionMode;
                 roomNumbersTextarea.value = '';
             }
-            
-            appState.currentRoomIndex = 0;
-            appState.currentCodeRoomIndex = 0;
-            appState.currentSeStSvRoomIndex = 0;
-            appState.isInspectionMode = false;
-            
-            // Wipe all localStorage (not just the one key) so no stale data survives
+
+            appState.currentRoomIndex       = clean.currentRoomIndex;
+            appState.currentCodeRoomIndex   = clean.currentCodeRoomIndex;
+            appState.currentSeStSvRoomIndex = clean.currentSeStSvRoomIndex;
+            appState.isInspectionMode       = clean.isInspectionMode;
+
+            // Wipe all localStorage so no stale data survives on reload
             localStorage.clear();
             hideResetModal();
 
-            // Clear the service worker cache then do a hard reload.
-            // This ensures the browser doesn't serve a cached copy of the app
-            // that might restore stale in-memory state on the next load.
-            function doReload() {
-                // Force a hard reload bypassing the SW cache
-                window.location.reload(true);
+            // Unregister the service worker, then clear its cache, then hard-reload.
+            function doReload() { window.location.reload(true); }
+
+            function clearCachesAndReload() {
+                if ('caches' in window) {
+                    caches.keys()
+                        .then(names => Promise.all(names.map(n => caches.delete(n))))
+                        .then(doReload).catch(doReload);
+                } else { doReload(); }
             }
 
-            if ('caches' in window) {
-                caches.keys().then(function(names) {
-                    return Promise.all(names.map(function(name) { return caches.delete(name); }));
-                }).then(doReload).catch(doReload);
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations()
+                    .then(registrations => Promise.all(registrations.map(r => r.unregister())))
+                    .then(clearCachesAndReload).catch(clearCachesAndReload);
             } else {
-                doReload();
+                clearCachesAndReload();
             }
         }
 
@@ -6976,17 +7036,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 const importNow = () => {
                     try {
                         const data = decodeShareData(encoded);
-                        appState = Object.assign({
-                            rooms: [], currentRoomIndex: 0, checkData: {}, roomStatus: {},
-                            isInspectionMode: false, roomCodes: {}, currentCodeRoomIndex: 0,
-                            codeSpecificComments: {}, seStSvRooms: [], currentSeStSvRoomIndex: 0,
-                            seStSvData: {}, customStatusOptions: [], customCommentOptions: [],
-                            assetTagz2: { roomCodes: {}, currentRoomIndex: 0, statusByCodeId: {},
-                                          commentsByCodeId: {}, barcodesByCodeId: {}, barcodePresets: [] },
-                            flexibleInspections: { rooms: [], currentRoomIndex: 0, unassignedBarcodes: [],
-                                                  assignments: {}, inspections: [], ecsPresets: [], locks: {},
-                                                  poolVisibleCount: 10, isFlexibleMode: false }
-                        }, data);
+                        appState = Object.assign(getCleanAppState(), data);
                         normalizeAppState();
                         saveDataToStorage();
                         history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -7066,23 +7116,7 @@ barcodeWrapper.appendChild(barcodeInput);
                     const data = JSON.parse(raw);
 
                     // Reset state before loading new data to ensure a clean slate
-                    appState = {
-                        rooms: [],
-                        currentRoomIndex: 0,
-                        checkData: {},
-                        roomStatus: {},
-                        isInspectionMode: false,
-                        roomCodes: {},
-                        currentCodeRoomIndex: 0,
-                        codeSpecificComments: {},
-                        seStSvRooms: [],
-                        currentSeStSvRoomIndex: 0,
-                        seStSvData: {},
-                        customStatusOptions: [],
-                        customCommentOptions: [],
-                        assetTagz2: { roomCodes: {}, currentRoomIndex: 0, statusByCodeId: {}, commentsByCodeId: {}, barcodesByCodeId: {}, barcodePresets: [] },
-                        ...data
-                    };
+                    appState = Object.assign(getCleanAppState(), data);
                     normalizeAppState();
                     saveDataToStorage();
                     hideFileUploadModal();
