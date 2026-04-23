@@ -9416,32 +9416,32 @@ self.addEventListener('fetch', e => {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            // ── Separate location/status/time from extra fields ──────────────
-            // Extra fields (line-extra-*) are paired two-per-line to keep the
-            // bar compact. All other lines render as normal single lines.
+            // Walk active lines in their original order.
+            // Consecutive extra fields (line-extra-*) are merged two-per-line;
+            // all other lines (room, status, time) render individually.
             const allActive = lines.filter(l => l.on && l.text.trim());
             if (!allActive.length) return;
 
-            const extraActive  = allActive.filter(l => l.id && l.id.startsWith('line-extra'));
-            const normalActive = allActive.filter(l => !l.id || !l.id.startsWith('line-extra'));
+            const renderLines = [];
+            let idx = 0;
+            while (idx < allActive.length) {
+                const line = allActive[idx];
+                const isExtra = line.id && line.id.startsWith('line-extra');
+                const nextLine = allActive[idx + 1];
+                const nextIsExtra = nextLine && nextLine.id && nextLine.id.startsWith('line-extra');
 
-            // Pair extras: [ [a,b], [c,d], [e] ]
-            const extraPairs = [];
-            for (let i = 0; i < extraActive.length; i += 2) {
-                extraPairs.push(extraActive.slice(i, i + 2));
+                if (isExtra && nextIsExtra) {
+                    // Pair two consecutive extras onto one line
+                    renderLines.push({
+                        text: line.text + '   |   ' + nextLine.text,
+                        bold: false, color: '#ffffff', small: true
+                    });
+                    idx += 2;
+                } else {
+                    renderLines.push(line);
+                    idx += 1;
+                }
             }
-
-            // Final render lines: normal lines + paired extra lines
-            const renderLines = [
-                ...normalActive,
-                ...extraPairs.map(pair => ({
-                    text: pair.map(f => f.text).join('   |   '),
-                    bold: false,
-                    color: '#ffffff',
-                    small: true,
-                    fSizeOverride: null
-                }))
-            ];
 
             const shortSide = Math.min(canvas.width, canvas.height);
             const pad       = Math.round(shortSide * 0.025);
