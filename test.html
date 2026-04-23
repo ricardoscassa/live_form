@@ -9425,51 +9425,86 @@ self.addEventListener('fetch', e => {
     /**
      * Render the photo + active stamp lines onto the preview canvas.
      */
-    /** Build one editor row and append it to stampLinesEditor */
+    // Track drag source index for stamp line reorder
+    let _stampDragSrcIdx = null;
+
+    function _rebuildStampEditor(canvas, lines, rawDataUrl) {
+        const editor = document.getElementById('stampLinesEditor');
+        editor.innerHTML = '';
+        lines.forEach(l => _buildStampLineRow(l, canvas, lines, rawDataUrl));
+        renderStampPreview(canvas, lines, rawDataUrl);
+    }
+
     function _buildStampLineRow(line, canvas, lines, rawDataUrl) {
         const editor = document.getElementById('stampLinesEditor');
         const row = document.createElement('div');
         row.className = 'stamp-line-row' + (line.on ? '' : ' disabled');
-        row.style.cursor = 'default';
+        row.style.position = 'relative';
 
-        // ── Drag handle (grip dots) — reorder lines ──
+        const rowIdx = () => [...editor.querySelectorAll('.stamp-line-row')].indexOf(row);
+
+        // ── Grip handle ──────────────────────────────────────────────────────
         const grip = document.createElement('span');
-        grip.style.cssText = 'cursor:grab;color:#636366;font-size:15px;line-height:1;padding:0 2px;flex-shrink:0;user-select:none;';
+        grip.style.cssText = 'cursor:grab;color:#636366;font-size:16px;line-height:1;padding:0 4px;flex-shrink:0;user-select:none;-webkit-user-select:none;touch-action:none;';
         grip.textContent = '⠿';
-        grip.title = 'Drag to reorder';
+        grip.title = 'Hold and drag to reorder';
 
-        // Drag-to-reorder: only active when grabbing the handle
-        grip.addEventListener('mousedown', () => { row.draggable = true; row.dataset.dragEnabled = '1'; });
-        row.addEventListener('dragend', () => { row.draggable = false; delete row.dataset.dragEnabled; row.style.opacity = ''; editor.querySelectorAll('.stamp-line-row').forEach(r => r.style.outline = ''); });
-        row.addEventListener('dragstart', e => {
-            if (!row.dataset.dragEnabled) { e.preventDefault(); return; }
-            e.dataTransfer.effectAllowed = 'move';
-            setTimeout(() => { row.style.opacity = '0.4'; }, 0);
-        });
-        row.addEventListener('dragover', e => {
+        // ── Pointer-based drag (works on touch + mouse) ──────────────────────
+        grip.addEventListener('pointerdown', e => {
             e.preventDefault();
-            editor.querySelectorAll('.stamp-line-row').forEach(r => r.style.outline = '');
-            row.style.outline = '2px solid #34C759';
-        });
-        row.addEventListener('drop', e => {
-            e.preventDefault();
-            row.style.outline = '';
-            // Find dragged row
-            const rows = [...editor.querySelectorAll('.stamp-line-row')];
-            const draggedRow = rows.find(r => r.style.opacity === '0.4' || r.dataset.dragEnabled);
-            if (!draggedRow || draggedRow === row) return;
-            const fromIdx = rows.indexOf(draggedRow);
-            const toIdx   = rows.indexOf(row);
-            if (fromIdx === -1 || toIdx === -1) return;
-            // Reorder lines array
-            const moved = lines.splice(fromIdx, 1)[0];
-            lines.splice(toIdx, 0, moved);
-            // Rebuild editor
-            editor.innerHTML = '';
-            lines.forEach(l => _buildStampLineRow(l, canvas, lines, rawDataUrl));
-            renderStampPreview(canvas, lines, rawDataUrl);
+            grip.setPointerCapture(e.pointerId);
+            _stampDragSrcIdx = rowIdx();
+            grip.style.cursor = 'grabbing';
+            row.style.opacity = '0.5';
         });
 
+        grip.addEventListener('pointermove', e => {
+            if (_stampDragSrcIdx === null) return;
+            // Find which row the pointer is currently over
+            const allRows = [...editor.querySelectorAll('.stamp-line-row')];
+            allRows.forEach(r => r.style.outline = '');
+            const target = allRows.find(r => {
+                if (r === row) return false;
+                const rect = r.getBoundingClientRect();
+                return e.clientY >= rect.top && e.clientY <= rect.bottom;
+            });
+            if (target) target.style.outline = '2px solid #34C759';
+        });
+
+        grip.addEventListener('pointerup', e => {
+            if (_stampDragSrcIdx === null) return;
+            grip.style.cursor = 'grab';
+            row.style.opacity = '';
+            const allRows = [...editor.querySelectorAll('.stamp-line-row')];
+            allRows.forEach(r => r.style.outline = '');
+
+            // Find drop target
+            const toRow = allRows.find(r => {
+                if (r === row) return false;
+                const rect = r.getBoundingClientRect();
+                return e.clientY >= rect.top && e.clientY <= rect.bottom;
+            });
+
+            if (toRow) {
+                const toIdx = allRows.indexOf(toRow);
+                const from  = _stampDragSrcIdx;
+                if (from !== toIdx) {
+                    const moved = lines.splice(from, 1)[0];
+                    lines.splice(toIdx, 0, moved);
+                    _rebuildStampEditor(canvas, lines, rawDataUrl);
+                }
+            }
+            _stampDragSrcIdx = null;
+        });
+
+        grip.addEventListener('pointercancel', () => {
+            _stampDragSrcIdx = null;
+            grip.style.cursor = 'grab';
+            row.style.opacity = '';
+            document.querySelectorAll('.stamp-line-row').forEach(r => r.style.outline = '');
+        });
+
+        // ── Toggle ───────────────────────────────────────────────────────────
         const toggleWrap = document.createElement('label');
         toggleWrap.className = 'stamp-toggle';
         const chk = document.createElement('input');
@@ -9489,6 +9524,7 @@ self.addEventListener('fetch', e => {
         toggleWrap.appendChild(track);
         toggleWrap.appendChild(thumb);
 
+        // ── Text input ───────────────────────────────────────────────────────
         const inp = document.createElement('input');
         inp.type = 'text';
         inp.className = 'stamp-line-input';
@@ -9500,14 +9536,39 @@ self.addEventListener('fetch', e => {
             renderStampPreview(canvas, lines, rawDataUrl);
         });
 
+        // ── Label ────────────────────────────────────────────────────────────
         const lbl = document.createElement('span');
         lbl.className = 'stamp-line-label';
         lbl.textContent = line.label || '';
 
-        row.appendChild(grip);
-        row.appendChild(toggleWrap);
-        row.appendChild(inp);
-        row.appendChild(lbl);
+        // ── Delete button — only for custom/extra lines, not fixed ones ──────
+        const fixedIds = ['line-room', 'line-info', 'line-time'];
+        const isDeletable = !line.id || !fixedIds.includes(line.id);
+        if (isDeletable) {
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.style.cssText = 'width:26px;height:26px;border-radius:50%;background:#dc3545;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:background 0.15s;-webkit-tap-highlight-color:transparent;';
+            delBtn.title = 'Remove line';
+            delBtn.innerHTML = '<svg width="10" height="2" viewBox="0 0 10 2"><rect x="0" y="0" width="10" height="2" rx="1" fill="white"/></svg>';
+            delBtn.addEventListener('click', () => {
+                const idx = lines.indexOf(line);
+                if (idx !== -1) {
+                    lines.splice(idx, 1);
+                    _rebuildStampEditor(canvas, lines, rawDataUrl);
+                }
+            });
+            row.appendChild(grip);
+            row.appendChild(toggleWrap);
+            row.appendChild(inp);
+            row.appendChild(lbl);
+            row.appendChild(delBtn);
+        } else {
+            row.appendChild(grip);
+            row.appendChild(toggleWrap);
+            row.appendChild(inp);
+            row.appendChild(lbl);
+        }
+
         editor.appendChild(row);
     }
 
