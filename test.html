@@ -6553,7 +6553,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 if (typeof flexBarcodeListTextarea !== 'undefined') flexBarcodeListTextarea.value = '';
             } else if (type === 'seStSv') {
                 appState.seStSvRooms = [];
-                appState.seStSvData = {};
+                appState.seStSvData = {}; 
                 roomNumbersTextarea.value = '';
             }
             
@@ -6562,10 +6562,25 @@ barcodeWrapper.appendChild(barcodeInput);
             appState.currentSeStSvRoomIndex = 0;
             appState.isInspectionMode = false;
             
-            localStorage.removeItem('roomInspectionApp');
+            // Wipe all localStorage (not just the one key) so no stale data survives
+            localStorage.clear();
             hideResetModal();
-            showMainMenu();
-            showMessageModal('Reset Complete', 'Application has been reset successfully.');
+
+            // Clear the service worker cache then do a hard reload.
+            // This ensures the browser doesn't serve a cached copy of the app
+            // that might restore stale in-memory state on the next load.
+            function doReload() {
+                // Force a hard reload bypassing the SW cache
+                window.location.reload(true);
+            }
+
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    return Promise.all(names.map(function(name) { return caches.delete(name); }));
+                }).then(doReload).catch(doReload);
+            } else {
+                doReload();
+            }
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -6940,31 +6955,74 @@ barcodeWrapper.appendChild(barcodeInput);
             if (!hash.startsWith('#d=')) return;
             const encoded = hash.slice(3);
             if (!encoded) return;
-            try {
-                const data = decodeShareData(encoded);
-                appState = Object.assign({
-                    rooms: [], currentRoomIndex: 0, checkData: {}, roomStatus: {},
-                    isInspectionMode: false, roomCodes: {}, currentCodeRoomIndex: 0,
-                    codeSpecificComments: {}, seStSvRooms: [], currentSeStSvRoomIndex: 0,
-                    seStSvData: {}, customStatusOptions: [], customCommentOptions: [],
-                    assetTagz2: { roomCodes: {}, currentRoomIndex: 0, statusByCodeId: {},
-                                  commentsByCodeId: {}, barcodesByCodeId: {}, barcodePresets: [] },
-                    flexibleInspections: { rooms: [], currentRoomIndex: 0, unassignedBarcodes: [],
-                                          assignments: {}, inspections: [], ecsPresets: [], locks: {},
-                                          poolVisibleCount: 10, isFlexibleMode: false }
-                }, data);
-                normalizeAppState();
-                saveDataToStorage();
+
+            // Check whether this device already has an active inspection in progress
+            function hasActiveData() {
+                if (appState.rooms && appState.rooms.length > 0) return true;
+                if (appState.roomCodes && Object.keys(appState.roomCodes).length > 0) return true;
+                if (appState.assetTagz2 && Object.keys(appState.assetTagz2.roomCodes || {}).length > 0) return true;
+                if (appState.seStSvRooms && appState.seStSvRooms.length > 0) return true;
+                if (appState.flexibleInspections && (
+                    (appState.flexibleInspections.rooms || []).length > 0 ||
+                    (appState.flexibleInspections.unassignedBarcodes || []).length > 0
+                )) return true;
+                return false;
+            }
+
+            function doImport() {
+                // Always wipe existing photos before importing — orphaned photos from
+                // the previous inspection are unreachable after the codeId keys change,
+                // so clearing them prevents silent storage accumulation.
+                const importNow = () => {
+                    try {
+                        const data = decodeShareData(encoded);
+                        appState = Object.assign({
+                            rooms: [], currentRoomIndex: 0, checkData: {}, roomStatus: {},
+                            isInspectionMode: false, roomCodes: {}, currentCodeRoomIndex: 0,
+                            codeSpecificComments: {}, seStSvRooms: [], currentSeStSvRoomIndex: 0,
+                            seStSvData: {}, customStatusOptions: [], customCommentOptions: [],
+                            assetTagz2: { roomCodes: {}, currentRoomIndex: 0, statusByCodeId: {},
+                                          commentsByCodeId: {}, barcodesByCodeId: {}, barcodePresets: [] },
+                            flexibleInspections: { rooms: [], currentRoomIndex: 0, unassignedBarcodes: [],
+                                                  assignments: {}, inspections: [], ecsPresets: [], locks: {},
+                                                  poolVisibleCount: 10, isFlexibleMode: false }
+                        }, data);
+                        normalizeAppState();
+                        saveDataToStorage();
+                        history.replaceState(null, '', window.location.pathname + window.location.search);
+                        setTimeout(() => {
+                            refreshUIFromState();
+                            renderDropdownEditor();
+                            renderCommentDropdownEditor();
+                            showMessageModal('Data Imported', 'Shared inspection data loaded successfully!');
+                        }, 300);
+                    } catch (e) {
+                        console.warn('Share import failed:', e);
+                        history.replaceState(null, '', window.location.pathname + window.location.search);
+                    }
+                };
+
+                // Clear photos first (async), then run the import
+                if (typeof clearAllPhotos === 'function') {
+                    clearAllPhotos().then(importNow).catch(importNow);
+                } else {
+                    importNow();
+                }
+            }
+
+            // If there's already an active inspection on this device, ask before overwriting
+            if (hasActiveData()) {
+                // Strip the hash first so a page refresh doesn't re-trigger the import
                 history.replaceState(null, '', window.location.pathname + window.location.search);
-                setTimeout(() => {
-                    refreshUIFromState();
-                    renderDropdownEditor();
-                    renderCommentDropdownEditor();
-                    showMessageModal('Data Imported', 'Shared inspection data loaded successfully!');
-                }, 300);
-            } catch (e) {
-                console.warn('Share import failed:', e);
-                history.replaceState(null, '', window.location.pathname + window.location.search);
+                showMessageModal(
+                    'Replace Active Inspection?',
+                    'All data will be wiped out. Continue?',
+                    doImport,
+                    'Yes, Delete & Import',
+                    'Cancel'
+                );
+            } else {
+                doImport();
             }
         }
 
