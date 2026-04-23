@@ -313,6 +313,18 @@
             background: #c82333;
         }
 
+        .dropdown-editor-btn.remove:disabled,
+        .dropdown-editor-btn.remove-comment:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .dropdown-editor-btn.remove:disabled:hover,
+        .dropdown-editor-btn.remove-comment:disabled:hover {
+            background: #ccc;
+        }
+
         .dropdown-editor-btn.add {
             background: #28a745;
             color: white;
@@ -894,6 +906,8 @@
 
         .status-options {
             position: absolute;
+            width: 100%;
+            min-width: 160px;
             background: white;
             border: 1px solid #ddd;
             border-radius: 8px;
@@ -1598,6 +1612,41 @@
 .ecs-mode-toggle.active {
     background: #667eea;
     color: white;
+}
+
+/* ── iOS-style toggle switch for dropdown editor ── */
+.ecs-ios-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+.ecs-ios-toggle-track {
+    display: block;
+    width: 51px;
+    height: 31px;
+    background: #e5e5ea;
+    border-radius: 16px;
+    transition: background 0.25s ease;
+    position: relative;
+}
+.ecs-ios-toggle input:checked + .ecs-ios-toggle-track {
+    background: #34c759;
+}
+.ecs-ios-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 27px;
+    height: 27px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+    transition: transform 0.25s ease;
+}
+.ecs-ios-toggle input:checked + .ecs-ios-toggle-track .ecs-ios-toggle-thumb {
+    transform: translateX(20px);
 }
 .ecs-mode-toggle .toggle-icon {
     font-size: 1rem;
@@ -2415,28 +2464,33 @@ Room Codes (Room- Codes)
                     </div>
                 </div>
 
-                <!-- PC-only Dropdown Editor Section -->
-                <div class="dropdown-editor pc-only">
-                    <h3>Edit Status Dropdown Options (PC Only)</h3>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">
-                        Customize the status dropdown options that appear in the ECS Inspection. Changes will be saved and can be exported/imported.
-                    </p>
-                    <div class="dropdown-editor-list" id="dropdownEditorList">
-                        <!-- Dropdown options will be dynamically added here -->
-                    </div>
-                    <button id="addDropdownOption" class="dropdown-editor-btn add">+ Add New Option</button>
-                </div>
+                <!-- Dropdown editor toggle + panel: PC only (≥1025px) -->
+                <div class="pc-only" style="margin:20px 0 0;">
 
-                <!-- New PC-only Dropdown Editor for Comments -->
-                <div id="commentDropdownEditor" class="dropdown-editor pc-only">
-                    <h3>Edit Comment Dropdown Options (PC Only)</h3>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">
-                        Customize the predefined comment options that appear in the ECS Inspection.
-                    </p>
-                    <div class="dropdown-editor-list" id="commentDropdownEditorList">
-                        <!-- Comment dropdown options will be dynamically added here -->
+                    <!-- iOS-style toggle row -->
+                    <div style="display:flex;align-items:center;gap:14px;padding:14px 0 6px;">
+                        <label class="ecs-ios-toggle" for="ecsDropdownToggleInput" style="cursor:pointer;display:flex;align-items:center;">
+                            <input type="checkbox" id="ecsDropdownToggleInput" style="position:absolute;opacity:0;width:0;height:0;">
+                            <span class="ecs-ios-toggle-track">
+                                <span class="ecs-ios-toggle-thumb"></span>
+                            </span>
+                        </label>
+                        <span style="font-size:0.95rem;font-weight:600;color:#555;user-select:none;cursor:pointer;" onclick="document.getElementById('ecsDropdownToggleInput').click()">Edit Dropdown Lists</span>
                     </div>
-                    <button id="addCommentDropdownOption" class="dropdown-editor-btn add">+ Add New Comment Option</button>
+
+                    <!-- Collapsible editor panel — toggled by JS only, no CSS override -->
+                    <div id="ecsDropdownEditorPanel" style="display:none;">
+                        <div class="dropdown-editor" style="margin-top:10px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                                <h3 style="margin:0;">Dropdown Lists</h3>
+                                <button id="addEcsDropdownList" class="dropdown-editor-btn add" style="width:auto;padding:8px 16px;">+ Add New List</button>
+                            </div>
+                            <p style="font-size:0.9rem;color:#666;margin-bottom:15px;">
+                                Each list becomes a dropdown column on every ECS row. At least one list must remain. The first list is the primary Status column.
+                            </p>
+                            <div id="ecsDropdownListsContainer"></div>
+                        </div>
+                    </div>
                 </div>
 
 
@@ -2570,7 +2624,7 @@ Room Codes (Room- Codes)
                 <div class="action-buttons">
                     <button id="exportExcel" class="button success">Export to CSV</button>
                     <button id="downloadJsonCheckPage" class="button warning">Download Data (JSON)</button>
-                    <button id="shareCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
+                    <button id="shareCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
                     <button id="backToInput" class="button secondary">Back to Input</button>
                 </div>
             </div>
@@ -2614,8 +2668,8 @@ Room Codes (Room- Codes)
                 <div class="action-buttons">
                     <button id="exportCodeExcel" class="button success">Export to CSV</button>
                      <button id="downloadJsonCodeCheckPage" class="button warning">Download Data (JSON)</button>
-                     <button id="shareCodeCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
-                    <button id="downloadAllPhotosBtn" class="button">📥 Download All Photos</button>
+                     <button id="shareCodeCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
+                    <button id="downloadAllPhotosBtn" class="button">Download All Photos</button>
                     <button id="backToCodeInput" class="button secondary">Back to Input</button>
                 </div>
             </div>
@@ -2667,7 +2721,7 @@ Room Codes (Room- Codes)
                 <div class="action-buttons">
                     <button id="exportAssetTagz2Csv" class="button success">Export to CSV</button>
                     <button id="downloadJsonAssetTagz2" class="button warning">Download Data (JSON)</button>
-                    <button id="shareAssetTagz2" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
+                    <button id="shareAssetTagz2" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
                     <button id="backToAssetTagz2Input" class="button secondary">Back to Input</button>
                 </div>
             </div>
@@ -2729,7 +2783,7 @@ Room Codes (Room- Codes)
                 <div class="action-buttons">
                     <button id="exportSeStSvCsv" class="button success">Export to CSV</button>
                     <button id="downloadJsonSeStSvCheckPage" class="button warning">Download Data (JSON)</button>
-                    <button id="shareSeStSvCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
+                    <button id="shareSeStSvCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
                     <button id="backToSeStSvInput" class="button secondary">Back to Input</button>
                 </div>
             </div>
@@ -2836,7 +2890,7 @@ Room Codes (Room- Codes)
                     <button id="flexExportCsv" class="button success">Export to CSV</button>
                     <button id="flexExportRoomStatus" class="button success">Export Room Status</button>
                     <button id="flexDownloadJson" class="button warning">Download Data (JSON)</button>
-                    <button id="flexShareData" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">📤 Share</button>
+                    <button id="flexShareData" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
                     <button id="flexUploadBarcodes" class="button">Upload Barcodes JSON</button>
                     <button id="backToFlexInput" class="button secondary">Back to Input</button>
                 </div>
@@ -2970,7 +3024,7 @@ Room Codes (Room- Codes)
     <!-- Share Modal -->
     <div id="shareModal" class="modal">
         <div class="modal-content" style="max-width:360px;text-align:center;">
-            <h3 style="margin-bottom:14px;color:#333;">📤 Share Inspection Data</h3>
+            <h3 style="margin-bottom:14px;color:#333;">Share Inspection Data</h3>
             <p style="font-size:0.82rem;color:#666;margin-bottom:14px;">
                 Scan the QR code or copy the link to transfer data to another device.<br>
                 <em style="color:#c0392b;">Photos are not included.</em>
@@ -3011,11 +3065,11 @@ Room Codes (Room- Codes)
     <!-- Photo Viewer Modal (outside container for full-screen overlay) -->
     <div id="photoModal" class="photo-modal">
         <div class="photo-modal-header">
-            <h3 id="photoModalTitle">📷 Photos</h3>
+            <h3 id="photoModalTitle">Photos</h3>
             <button class="photo-modal-close" id="photoModalClose">✕</button>
         </div>
         <div class="photo-download-bar">
-            <button class="button success" id="photoModalDownloadAll">📥 Download All Photos (ZIP)</button>
+            <button class="button success" id="photoModalDownloadAll">Download All Photos (ZIP)</button>
         </div>
         <div class="photo-grid" id="photoGrid"></div>
     </div>
@@ -3055,17 +3109,6 @@ Room Codes (Room- Codes)
       /* iOS vertical/touch optimizations for new lock/load controls */
       .button.lock-btn { min-width: 44px; min-height: 44px; }
       #flexBarcodeContainer { overflow-x: hidden; }
-    
-/* Hide dropdown editors ONLY on mobile phones */
-@media (max-width: 480px) {
-  .dropdown-edit-panel,
-  .status-edit-panel,
-  .comment-edit-panel,
-  .edit-dropdown-section {
-    display: none !important;
-  }
-}
-
 </style>
 
     <style>
@@ -3098,21 +3141,11 @@ Room Codes (Room- Codes)
         fill: #34c759; /* iOS green */
       }
       .lock-btn:active { transform: scale(0.9); }
-    
-/* Hide dropdown editors ONLY on mobile phones */
-@media (max-width: 480px) {
-  .dropdown-edit-panel,
-  .status-edit-panel,
-  .comment-edit-panel,
-  .edit-dropdown-section {
-    display: none !important;
-  }
-}
-
 </style>
 
 <script>
         // Global variables
+        var _ecsEditorOpen = false; // Tracks ECS dropdown editor panel open state
         let appState = {
             
             flexibleInspections: {
@@ -3139,6 +3172,10 @@ rooms: [],
             seStSvData: {},
             customStatusOptions: [],
             customCommentOptions: [],
+            // ecsDropdownLists: array of {id, name, options[]} — drives extra columns in ECS rows
+            ecsDropdownLists: [],
+            // ecsExtraData: { listId: { uniqueCodeId: selectedValue } }
+            ecsExtraData: {},
             assetTagz2: {
                 roomCodes: {},
                 currentRoomIndex: 0,
@@ -3381,11 +3418,33 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('cancelReset').addEventListener('click', hideResetModal);
             document.getElementById('uploadFile').addEventListener('click', uploadFile);
             document.getElementById('cancelUpload').addEventListener('click', hideFileUploadModal);
-            document.getElementById('messageOk').addEventListener('click', hideMessageModal);
+            // Note: messageOk/messageCancel/messageConfirm listeners are registered below setupEventListeners
 
-            // Dropdown editor buttons
-            document.getElementById('addDropdownOption').addEventListener('click', addDropdownOption);
-            document.getElementById('addCommentDropdownOption').addEventListener('click', addCommentDropdownOption);
+            // iOS toggle switch for ECS dropdown editor (PC only — wrapper div is pc-only in HTML)
+            document.getElementById('ecsDropdownToggleInput').addEventListener('change', function() {
+                _ecsEditorOpen = this.checked;
+                var panel = document.getElementById('ecsDropdownEditorPanel');
+                panel.style.display = _ecsEditorOpen ? 'block' : 'none';
+                if (_ecsEditorOpen) {
+                    getEcsDropdownLists(); // ensure initialised
+                    renderEcsDropdownListsEditor();
+                }
+            });
+
+            // Add New List button
+            document.getElementById('addEcsDropdownList').addEventListener('click', function() {
+                const lists = getEcsDropdownLists();
+                const newId = 'list-extra-' + Date.now();
+                lists.push({ id: newId, name: 'New List', options: ['Option 1'] });
+                if (!appState.ecsExtraData) appState.ecsExtraData = {};
+                appState.ecsExtraData[newId] = {};
+                saveDataToStorage();
+                renderEcsDropdownListsEditor();
+            });
+
+            // AT2 dropdown editor buttons (ECS uses the Add New List button instead)
+            document.getElementById('addDropdownOption') && document.getElementById('addDropdownOption').addEventListener('click', addDropdownOption);
+            document.getElementById('addCommentDropdownOption') && document.getElementById('addCommentDropdownOption').addEventListener('click', addCommentDropdownOption);
             // Asset Tagz 2.0 dropdown editor buttons (same underlying lists as ECS)
             const at2AddStatusBtn = document.getElementById('addAssetTagz2DropdownOption');
             if (at2AddStatusBtn) at2AddStatusBtn.addEventListener('click', () => {
@@ -3551,127 +3610,219 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
         }
 
         // Dropdown Editor Functions
-        function renderDropdownEditor(elementId = 'dropdownEditorList') {
-            const editorList = document.getElementById(elementId);
-            if (!editorList) return;
-            editorList.innerHTML = '';
+        // ── ECS Dropdown List Management ──────────────────────────────────────
+        // appState.ecsDropdownLists = [ {id, name, options:[]} , ... ]
+        // The first list is the "Status" column; additional lists add extra columns.
+        // appState.ecsExtraData = { listId: { uniqueCodeId: value } }
 
-            const options = getCodeStatusOptions();
-            options.forEach((option, index) => {
-                const item = document.createElement('div');
-                item.className = 'dropdown-editor-item';
-                item.innerHTML = `
-                    <input type="text" class="dropdown-editor-input" value="${option}" data-index="${index}">
-                    <button class="dropdown-editor-btn remove" data-index="${index}">Remove</button>
-                `;
-                editorList.appendChild(item);
-            });
+        function getEcsDropdownLists() {
+            if (!Array.isArray(appState.ecsDropdownLists) || appState.ecsDropdownLists.length === 0) {
+                // Seed from legacy customStatusOptions / customCommentOptions if present
+                const statusOpts = (Array.isArray(appState.customStatusOptions) && appState.customStatusOptions.length)
+                    ? appState.customStatusOptions : [...defaultCodeStatusOptions];
+                const commentOpts = (Array.isArray(appState.customCommentOptions) && appState.customCommentOptions.length)
+                    ? appState.customCommentOptions : [...defaultCommentOptions];
+                appState.ecsDropdownLists = [
+                    { id: 'list-status',  name: 'Status',  options: statusOpts  },
+                    { id: 'list-comment', name: 'Comment', options: commentOpts }
+                ];
+            }
+            return appState.ecsDropdownLists;
+        }
 
-            // Add event listeners
-            editorList.querySelectorAll('.dropdown-editor-input').forEach(input => {
-                input.addEventListener('input', updateDropdownOption);
-            });
+        // Legacy getters — still used by AT2 and share encode/decode
+        function getCodeStatusOptions() {
+            const lists = getEcsDropdownLists();
+            return lists[0] ? lists[0].options : defaultCodeStatusOptions;
+        }
+        function getCommentOptions() {
+            const lists = getEcsDropdownLists();
+            return lists[1] ? lists[1].options : defaultCommentOptions;
+        }
 
-            editorList.querySelectorAll('.dropdown-editor-btn.remove').forEach(btn => {
-                btn.addEventListener('click', removeDropdownOption);
+        // Render the full editor: one collapsible card per list + add/delete list controls
+        function renderEcsDropdownListsEditor() {
+            const container = document.getElementById('ecsDropdownListsContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            const lists = getEcsDropdownLists();
+
+            lists.forEach((list, listIdx) => {
+                const isOnly = lists.length <= 1;
+
+                const card = document.createElement('div');
+                card.className = 'dropdown-editor';
+                card.style.marginTop = '10px';
+
+                // ── List header row: name input + delete list button ──
+                const headerRow = document.createElement('div');
+                headerRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:12px;';
+
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'dropdown-editor-input';
+                nameInput.value = list.name;
+                nameInput.placeholder = 'List name (shown as column header)';
+                nameInput.style.flex = '1';
+                nameInput.addEventListener('input', () => {
+                    list.name = nameInput.value;
+                    saveDataToStorage();
+                });
+
+                const deleteListBtn = document.createElement('button');
+                deleteListBtn.className = 'dropdown-editor-btn remove';
+                deleteListBtn.textContent = 'Delete List';
+                deleteListBtn.disabled = isOnly;
+                if (isOnly) deleteListBtn.title = 'At least one list must remain';
+                deleteListBtn.addEventListener('click', () => {
+                    if (lists.length <= 1) {
+                        showMessageModal('Cannot Delete', 'At least one dropdown list must remain.');
+                        return;
+                    }
+                    appState.ecsDropdownLists.splice(listIdx, 1);
+                    // Clean up stored data for this list
+                    if (appState.ecsExtraData) delete appState.ecsExtraData[list.id];
+                    saveDataToStorage();
+                    renderEcsDropdownListsEditor();
+                });
+
+                headerRow.appendChild(nameInput);
+                headerRow.appendChild(deleteListBtn);
+                card.appendChild(headerRow);
+
+                // ── Options list ──
+                const optionsList = document.createElement('div');
+                optionsList.className = 'dropdown-editor-list';
+                optionsList.style.marginBottom = '10px';
+
+                const renderOptions = () => {
+                    optionsList.innerHTML = '';
+                    list.options.forEach((opt, optIdx) => {
+                        const item = document.createElement('div');
+                        item.className = 'dropdown-editor-item';
+                        const isOnlyOpt = list.options.length <= 1;
+
+                        const optInput = document.createElement('input');
+                        optInput.type = 'text';
+                        optInput.className = 'dropdown-editor-input';
+                        optInput.value = opt;
+                        optInput.addEventListener('input', () => {
+                            list.options[optIdx] = optInput.value;
+                            saveDataToStorage();
+                        });
+
+                        const removeOptBtn = document.createElement('button');
+                        removeOptBtn.className = 'dropdown-editor-btn remove';
+                        removeOptBtn.textContent = 'Remove';
+                        removeOptBtn.disabled = isOnlyOpt;
+                        if (isOnlyOpt) removeOptBtn.title = 'At least one option must remain';
+                        removeOptBtn.addEventListener('click', () => {
+                            if (list.options.length <= 1) {
+                                showMessageModal('Cannot Remove', 'At least one option must remain in each list.');
+                                return;
+                            }
+                            list.options.splice(optIdx, 1);
+                            saveDataToStorage();
+                            renderOptions();
+                        });
+
+                        item.appendChild(optInput);
+                        item.appendChild(removeOptBtn);
+                        optionsList.appendChild(item);
+                    });
+                };
+                renderOptions();
+                card.appendChild(optionsList);
+
+                // ── Add option button ──
+                const addOptBtn = document.createElement('button');
+                addOptBtn.className = 'dropdown-editor-btn add';
+                addOptBtn.textContent = '+ Add Option';
+                addOptBtn.addEventListener('click', () => {
+                    list.options.push('New Option');
+                    saveDataToStorage();
+                    renderOptions();
+                });
+                card.appendChild(addOptBtn);
+
+                container.appendChild(card);
             });
+        }
+
+        // Keep legacy render functions so AT2 still works (it calls these)
+        function renderDropdownEditor(elementId) {
+            // AT2 has its own dedicated editor div; re-use the list editor only for the ECS panel
+            if (elementId && elementId !== 'dropdownEditorList') {
+                const el = document.getElementById(elementId);
+                if (!el) return;
+                el.innerHTML = '';
+                const options = getCodeStatusOptions();
+                options.forEach((option, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-editor-item';
+                    const isOnly = options.length <= 1;
+                    item.innerHTML = `
+                        <input type="text" class="dropdown-editor-input" value="${option}" data-index="${index}" data-list="status">
+                        <button class="dropdown-editor-btn remove" data-index="${index}" data-list="status"${isOnly ? ' disabled title="At least one option must remain"' : ''}>Remove</button>
+                    `;
+                    el.appendChild(item);
+                });
+                el.querySelectorAll('.dropdown-editor-input[data-list="status"]').forEach(inp => inp.addEventListener('input', e => {
+                    const lists = getEcsDropdownLists();
+                    if (lists[0]) { lists[0].options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
+                }));
+                el.querySelectorAll('.dropdown-editor-btn.remove[data-list="status"]').forEach(btn => btn.addEventListener('click', e => {
+                    const lists = getEcsDropdownLists();
+                    if (!lists[0]) return;
+                    if (lists[0].options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
+                    lists[0].options.splice(parseInt(e.target.dataset.index), 1);
+                    saveDataToStorage();
+                    renderDropdownEditor(elementId);
+                }));
+            } else {
+                renderEcsDropdownListsEditor();
+            }
+        }
+
+        function renderCommentDropdownEditor(elementId) {
+            if (elementId && elementId !== 'commentDropdownEditorList') {
+                const el = document.getElementById(elementId);
+                if (!el) return;
+                el.innerHTML = '';
+                const options = getCommentOptions();
+                options.forEach((option, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-editor-item';
+                    const isOnly = options.length <= 1;
+                    item.innerHTML = `
+                        <input type="text" class="dropdown-editor-input" value="${option}" data-index="${index}" data-list="comment">
+                        <button class="dropdown-editor-btn remove-comment" data-index="${index}" data-list="comment"${isOnly ? ' disabled title="At least one option must remain"' : ''}>Remove</button>
+                    `;
+                    el.appendChild(item);
+                });
+                el.querySelectorAll('.dropdown-editor-input[data-list="comment"]').forEach(inp => inp.addEventListener('input', e => {
+                    const lists = getEcsDropdownLists();
+                    if (lists[1]) { lists[1].options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
+                }));
+                el.querySelectorAll('.dropdown-editor-btn.remove-comment[data-list="comment"]').forEach(btn => btn.addEventListener('click', e => {
+                    const lists = getEcsDropdownLists();
+                    if (!lists[1]) return;
+                    if (lists[1].options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
+                    lists[1].options.splice(parseInt(e.target.dataset.index), 1);
+                    saveDataToStorage();
+                    renderCommentDropdownEditor(elementId);
+                }));
+            }
+            // For the ECS panel we rely on renderEcsDropdownListsEditor; no separate comment panel
         }
 
         function addDropdownOption() {
-            if (!appState.customStatusOptions || appState.customStatusOptions.length === 0) {
-                appState.customStatusOptions = [...defaultCodeStatusOptions];
-            }
-            appState.customStatusOptions.push('New Option');
-            saveDataToStorage();
-            renderDropdownEditor();
-            renderDropdownEditor('assetTagz2DropdownEditorList');
+            const lists = getEcsDropdownLists();
+            if (lists[0]) { lists[0].options.push('New Option'); saveDataToStorage(); renderEcsDropdownListsEditor(); renderDropdownEditor('assetTagz2DropdownEditorList'); }
         }
-
-        function updateDropdownOption(event) {
-            const index = parseInt(event.target.dataset.index);
-            const value = event.target.value;
-            
-            if (!appState.customStatusOptions || appState.customStatusOptions.length === 0) {
-                appState.customStatusOptions = [...defaultCodeStatusOptions];
-            }
-            
-            appState.customStatusOptions[index] = value;
-            saveDataToStorage();
-        }
-
-        function removeDropdownOption(event) {
-            const index = parseInt(event.target.dataset.index);
-            
-            if (!appState.customStatusOptions || appState.customStatusOptions.length === 0) {
-                appState.customStatusOptions = [...defaultCodeStatusOptions];
-            }
-            
-            appState.customStatusOptions.splice(index, 1);
-            saveDataToStorage();
-            renderDropdownEditor();
-            renderDropdownEditor('assetTagz2DropdownEditorList');
-        }
-
-        // Comment Dropdown Editor Functions
-        function renderCommentDropdownEditor(elementId = 'commentDropdownEditorList') {
-            const editorList = document.getElementById(elementId);
-            if (!editorList) return;
-            editorList.innerHTML = '';
-
-            const options = getCommentOptions();
-            options.forEach((option, index) => {
-                const item = document.createElement('div');
-                item.className = 'dropdown-editor-item';
-                item.innerHTML = `
-                    <input type="text" class="dropdown-editor-input" value="${option}" data-index="${index}">
-                    <button class="dropdown-editor-btn remove-comment" data-index="${index}">Remove</button>
-                `;
-                editorList.appendChild(item);
-            });
-
-            // Add event listeners
-            editorList.querySelectorAll('.dropdown-editor-input').forEach(input => {
-                input.addEventListener('input', updateCommentDropdownOption);
-            });
-
-            editorList.querySelectorAll('.dropdown-editor-btn.remove-comment').forEach(btn => {
-                btn.addEventListener('click', removeCommentDropdownOption);
-            });
-        }
-
         function addCommentDropdownOption() {
-            if (!appState.customCommentOptions || appState.customCommentOptions.length === 0) {
-                appState.customCommentOptions = [...defaultCommentOptions];
-            }
-            appState.customCommentOptions.push('New Comment');
-            saveDataToStorage();
-            renderCommentDropdownEditor();
-            renderCommentDropdownEditor('assetTagz2CommentDropdownEditorList');
-        }
-
-        function updateCommentDropdownOption(event) {
-            const index = parseInt(event.target.dataset.index);
-            const value = event.target.value;
-            
-            if (!appState.customCommentOptions || appState.customCommentOptions.length === 0) {
-                appState.customCommentOptions = [...defaultCommentOptions];
-            }
-            
-            appState.customCommentOptions[index] = value;
-            saveDataToStorage();
-        }
-
-        function removeCommentDropdownOption(event) {
-            const index = parseInt(event.target.dataset.index);
-            
-            if (!appState.customCommentOptions || appState.customCommentOptions.length === 0) {
-                appState.customCommentOptions = [...defaultCommentOptions];
-            }
-            
-            appState.customCommentOptions.splice(index, 1);
-            saveDataToStorage();
-            renderCommentDropdownEditor();
-            renderCommentDropdownEditor('assetTagz2CommentDropdownEditorList');
+            const lists = getEcsDropdownLists();
+            if (lists[1]) { lists[1].options.push('New Comment'); saveDataToStorage(); renderCommentDropdownEditor('assetTagz2CommentDropdownEditorList'); }
         }
 
 
@@ -3697,8 +3848,13 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
 
         function showCodeInputPage() {
             showPage('codeInputPage');
-            renderDropdownEditor(); // Refresh status dropdown editor
-            renderCommentDropdownEditor(); // Refresh comment dropdown editor
+            // Reset toggle to off state on page entry
+            var panel = document.getElementById('ecsDropdownEditorPanel');
+            var toggleInput = document.getElementById('ecsDropdownToggleInput');
+            if (panel) panel.style.display = 'none';
+            if (toggleInput) toggleInput.checked = false;
+            _ecsEditorOpen = false;
+            getEcsDropdownLists(); // ensure lists are seeded from legacy options if needed
         }
 
         function showAssetTagz2InputPage() {
@@ -3903,6 +4059,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             appState.seStSvData = (appState.seStSvData && typeof appState.seStSvData === 'object') ? appState.seStSvData : {};
             appState.customStatusOptions = Array.isArray(appState.customStatusOptions) ? appState.customStatusOptions : [];
             appState.customCommentOptions = Array.isArray(appState.customCommentOptions) ? appState.customCommentOptions : [];
+            if (!Array.isArray(appState.ecsDropdownLists)) appState.ecsDropdownLists = [];
+            if (!appState.ecsExtraData || typeof appState.ecsExtraData !== 'object') appState.ecsExtraData = {};
             if (typeof appState.ecsQuickEntryMode !== 'boolean') appState.ecsQuickEntryMode = false;
             if (!appState.ecsQuickEntryState || typeof appState.ecsQuickEntryState !== 'object') appState.ecsQuickEntryState = {};
 
@@ -4340,7 +4498,10 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             appState.currentCodeRoomIndex = 0;
             appState.checkData = {};
             appState.codeSpecificComments = {};
+            appState.ecsExtraData = {};
             appState.isInspectionMode = true;
+            // Ensure dropdown lists are initialised before inspection starts
+            getEcsDropdownLists();
         
             // Initialize check data
             for (const room in appState.roomCodes) {
@@ -4665,7 +4826,7 @@ if (presets.length) {
                 const controlsRow = document.createElement('div');
                 controlsRow.className = 'controls-row';
 
-                // Status wrapper (same as ECS)
+                // Status wrapper (same as ECS, with clear option)
                 const statusWrapper = document.createElement('div');
                 statusWrapper.className = 'control-wrapper';
                 statusWrapper.style.position = 'relative';
@@ -4686,6 +4847,9 @@ if (presets.length) {
                 statusOptions.className = 'status-options';
                 statusOptions.dataset.codeId = codeId;
 
+                // Clear option — hidden until something is selected
+                statusOptions.appendChild(buildClearOption(codeId, selectAssetTagz2Status, false));
+
                 codeStatusOptions.forEach((status, index) => {
                     const option = document.createElement('div');
                     option.className = 'status-option';
@@ -4699,57 +4863,58 @@ if (presets.length) {
                 statusWrapper.appendChild(statusOptions);
                 controlsRow.appendChild(statusWrapper);
 
-                // Comment wrapper (same as ECS)
+                // Comment wrapper — button+options style matching ECS
                 const commentWrapper = document.createElement('div');
                 commentWrapper.className = 'control-wrapper comment-section';
+                commentWrapper.style.position = 'relative';
 
                 const commentLabel = document.createElement('div');
                 commentLabel.className = 'control-label';
                 commentLabel.textContent = 'Comment';
                 commentWrapper.appendChild(commentLabel);
 
-                const commentSelect = document.createElement('select');
-                commentSelect.className = 'comment-textarea';
-                commentSelect.dataset.codeId = codeId;
+                const commentButton = document.createElement('button');
+                commentButton.className = 'status-button';
+                commentButton.textContent = 'Select comment...';
+                commentButton.dataset.codeId = codeId;
+                commentButton.dataset.role = 'at2-comment-btn';
+                commentButton.addEventListener('click', toggleAt2CommentOptions);
+                commentWrapper.appendChild(commentButton);
 
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Select comment...';
-                commentSelect.appendChild(defaultOption);
+                const commentOptionsDiv = document.createElement('div');
+                commentOptionsDiv.className = 'status-options';
+                commentOptionsDiv.dataset.codeId = codeId;
+                commentOptionsDiv.dataset.role = 'at2-comment-options';
 
-                commentOptions.forEach(choice => {
-                    const option = document.createElement('option');
-                    option.value = choice;
-                    option.textContent = choice;
-                    commentSelect.appendChild(option);
+                // Clear option — hidden until something is selected
+                commentOptionsDiv.appendChild(buildClearOption(codeId, selectAt2Comment, false));
+
+                commentOptions.forEach((choice, index) => {
+                    const opt = document.createElement('div');
+                    opt.className = 'status-option';
+                    opt.textContent = choice;
+                    opt.dataset.codeId = codeId;
+                    opt.dataset.commentIndex = index;
+                    opt.addEventListener('click', selectAt2Comment);
+                    commentOptionsDiv.appendChild(opt);
                 });
 
-                const customOption = document.createElement('option');
-                customOption.value = '__custom__';
-                customOption.textContent = 'Custom...';
-                commentSelect.appendChild(customOption);
+                // Custom option
+                const customOptDiv = document.createElement('div');
+                customOptDiv.className = 'status-option';
+                customOptDiv.textContent = 'Custom...';
+                customOptDiv.dataset.codeId = codeId;
+                customOptDiv.dataset.commentIndex = '__custom__';
+                customOptDiv.addEventListener('click', selectAt2Comment);
+                commentOptionsDiv.appendChild(customOptDiv);
 
-                commentWrapper.appendChild(commentSelect);
+                commentWrapper.appendChild(commentOptionsDiv);
 
                 const customInput = document.createElement('textarea');
                 customInput.className = 'custom-comment-input';
                 customInput.dataset.codeId = codeId;
                 customInput.placeholder = 'Enter your custom comment here...';
                 customInput.rows = 2;
-
-                commentSelect.addEventListener('change', function(event) {
-                    const selectedValue = event.target.value;
-                    if (selectedValue === '__custom__') {
-                        customInput.classList.add('show');
-                        customInput.focus();
-                    } else {
-                        customInput.classList.remove('show');
-                        customInput.value = '';
-                        at.commentsByCodeId[codeId] = selectedValue;
-                        saveDataToStorage();
-                    }
-                });
-
                 customInput.addEventListener('input', function(event) {
                     at.commentsByCodeId[codeId] = event.target.value;
                     saveDataToStorage();
@@ -4809,33 +4974,106 @@ barcodeWrapper.appendChild(barcodeInput);
         function toggleAssetTagz2StatusOptions(event) {
             event.stopPropagation();
             const codeId = event.target.dataset.codeId;
-            const statusOptions = document.querySelector(`#assetTagz2ChecksContainer .status-options[data-code-id="${codeId}"]`);
+            const statusOptions = event.target.parentElement.querySelector('.status-options');
 
-            document.querySelectorAll('#assetTagz2ChecksContainer .status-options').forEach(options => {
-                if (options !== statusOptions) options.classList.remove('active');
+            document.querySelectorAll('#assetTagz2ChecksContainer .status-options').forEach(opts => {
+                if (opts !== statusOptions) opts.classList.remove('active');
             });
 
-            if (statusOptions) statusOptions.classList.toggle('active');
+            if (statusOptions) {
+                statusOptions.classList.toggle('active');
+                const at = appState.assetTagz2 || {};
+                const hasSelection = at.statusByCodeId && at.statusByCodeId[codeId] !== null && at.statusByCodeId[codeId] !== undefined;
+                refreshClearOption(statusOptions, hasSelection);
+            }
         }
 
         function selectAssetTagz2Status(event) {
             const at = appState.assetTagz2 || {};
             const codeId = event.target.dataset.codeId;
-            const statusIndex = parseInt(event.target.dataset.statusIndex);
+            const statusIndex = event.target.dataset.statusIndex;
             const statusText = event.target.textContent;
 
-            at.statusByCodeId[codeId] = statusIndex;
-
             const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button[data-code-id="${codeId}"]`);
-            if (statusButton) {
-                statusButton.textContent = statusText;
-                statusButton.classList.add('selected');
+            const statusOptions = event.target.closest('.status-options');
+
+            if (statusIndex === '__clear__') {
+                // Clear the selection
+                at.statusByCodeId[codeId] = null;
+                if (statusButton) {
+                    statusButton.textContent = 'Select Status';
+                    statusButton.classList.remove('selected');
+                }
+                if (statusOptions) statusOptions.classList.remove('active');
+                refreshClearOption(statusOptions, false);
+            } else {
+                at.statusByCodeId[codeId] = parseInt(statusIndex);
+                if (statusButton) {
+                    statusButton.textContent = statusText;
+                    statusButton.classList.add('selected');
+                }
+                if (statusOptions) statusOptions.classList.remove('active');
+                refreshClearOption(statusOptions, true);
             }
 
-            const statusOptions = document.querySelector(`#assetTagz2ChecksContainer .status-options[data-code-id="${codeId}"]`);
-            if (statusOptions) statusOptions.classList.remove('active');
-
             saveDataToStorage();
+        }
+
+        function toggleAt2CommentOptions(event) {
+            event.stopPropagation();
+            const codeId = event.target.dataset.codeId;
+            const commentOptions = event.target.parentElement.querySelector('.status-options[data-role="at2-comment-options"]');
+            if (!commentOptions) return;
+
+            document.querySelectorAll('#assetTagz2ChecksContainer .status-options').forEach(el => {
+                if (el !== commentOptions) el.classList.remove('active');
+            });
+
+            commentOptions.classList.toggle('active');
+            const at = appState.assetTagz2 || {};
+            const hasSelection = !!(at.commentsByCodeId && at.commentsByCodeId[codeId]);
+            refreshClearOption(commentOptions, hasSelection);
+        }
+
+        function selectAt2Comment(event) {
+            const at = appState.assetTagz2 || {};
+            const codeId = event.target.dataset.codeId;
+            const commentIndex = event.target.dataset.commentIndex;
+            const commentText = event.target.textContent;
+
+            const wrapper = event.target.closest('.control-wrapper');
+            const commentButton = wrapper ? wrapper.querySelector('[data-role="at2-comment-btn"]') : null;
+            const customInput = wrapper ? wrapper.querySelector('.custom-comment-input') : null;
+            const optionsPanel = event.target.closest('.status-options');
+
+            if (commentIndex === '__clear__') {
+                at.commentsByCodeId[codeId] = '';
+                if (commentButton) {
+                    commentButton.textContent = 'Select comment...';
+                    commentButton.classList.remove('selected');
+                }
+                if (customInput) { customInput.classList.remove('show'); customInput.value = ''; }
+                if (optionsPanel) optionsPanel.classList.remove('active');
+                refreshClearOption(optionsPanel, false);
+                saveDataToStorage();
+                return;
+            }
+
+            if (commentIndex === '__custom__') {
+                if (commentButton) { commentButton.textContent = 'Custom...'; commentButton.classList.add('selected'); }
+                if (customInput) { customInput.classList.add('show'); customInput.focus(); }
+                // Camera shows when the user types in the custom input (handled by existing input delegation)
+            } else {
+                at.commentsByCodeId[codeId] = commentText;
+                if (commentButton) { commentButton.textContent = commentText; commentButton.classList.add('selected'); }
+                if (customInput) { customInput.classList.remove('show'); customInput.value = ''; }
+                saveDataToStorage();
+                // Show camera button (same as AT2 status selection)
+                setTimeout(() => typeof _showCameraForAt2CodeId === 'function' && _showCameraForAt2CodeId(codeId), 50);
+            }
+
+            if (optionsPanel) optionsPanel.classList.remove('active');
+            refreshClearOption(optionsPanel, true);
         }
 
         function updateAssetTagz2CheckStates() {
@@ -4858,6 +5096,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 const comment = at.commentsByCodeId[codeId] || '';
                 const barcode = at.barcodesByCodeId[codeId] || '';
 
+                // Restore status button
                 const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button[data-code-id="${codeId}"]`);
                 if (statusButton) {
                     if (statusIndex !== null && statusIndex !== undefined) {
@@ -4869,20 +5108,24 @@ barcodeWrapper.appendChild(barcodeInput);
                     }
                 }
 
-                const commentSelect = document.querySelector(`#assetTagz2ChecksContainer .comment-textarea[data-code-id="${codeId}"]`);
+                // Restore comment button (new button+options pattern)
+                const commentButton = document.querySelector(`#assetTagz2ChecksContainer [data-role="at2-comment-btn"][data-code-id="${codeId}"]`);
                 const customInput = document.querySelector(`#assetTagz2ChecksContainer .custom-comment-input[data-code-id="${codeId}"]`);
-                if (commentSelect && customInput) {
+                if (commentButton && customInput) {
                     const matchingChoice = commentOptions.find(choice => choice === comment);
                     if (matchingChoice) {
-                        commentSelect.value = matchingChoice;
+                        commentButton.textContent = matchingChoice;
+                        commentButton.classList.add('selected');
                         customInput.classList.remove('show');
                         customInput.value = '';
                     } else if (comment) {
-                        commentSelect.value = '__custom__';
+                        commentButton.textContent = 'Custom...';
+                        commentButton.classList.add('selected');
                         customInput.classList.add('show');
                         customInput.value = comment;
                     } else {
-                        commentSelect.value = '';
+                        commentButton.textContent = 'Select comment...';
+                        commentButton.classList.remove('selected');
                         customInput.classList.remove('show');
                         customInput.value = '';
                     }
@@ -5155,6 +5398,86 @@ barcodeWrapper.appendChild(barcodeInput);
                 commentWrapper.appendChild(customInput);
                 controlsRow.appendChild(commentWrapper);
 
+                // ── Extra dropdown lists (lists[2], lists[3], …) ──────────────
+                const allLists = getEcsDropdownLists();
+                if (allLists.length > 2) {
+                    if (!appState.ecsExtraData) appState.ecsExtraData = {};
+                    allLists.slice(2).forEach(list => {
+                        if (!appState.ecsExtraData[list.id]) appState.ecsExtraData[list.id] = {};
+                        const extraWrapper = document.createElement('div');
+                        extraWrapper.className = 'control-wrapper';
+                        extraWrapper.style.position = 'relative';
+
+                        const extraLabel = document.createElement('div');
+                        extraLabel.className = 'control-label';
+                        extraLabel.textContent = list.name;
+                        extraWrapper.appendChild(extraLabel);
+
+                        const extraButton = document.createElement('button');
+                        extraButton.className = 'status-button';
+                        extraButton.textContent = `Select ${list.name}...`;
+                        extraButton.dataset.codeId = uniqueCodeId;
+                        extraButton.dataset.role = `extra-btn-${list.id}`;
+
+                        const extraOptionsDiv = document.createElement('div');
+                        extraOptionsDiv.className = 'status-options';
+                        extraOptionsDiv.dataset.codeId = uniqueCodeId;
+                        extraOptionsDiv.dataset.role = `extra-options-${list.id}`;
+
+                        // Clear option
+                        const clearOpt = document.createElement('div');
+                        clearOpt.className = 'status-option clear-option';
+                        clearOpt.textContent = '✕  Clear selection';
+                        clearOpt.style.display = 'none';
+                        clearOpt.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            appState.ecsExtraData[list.id][uniqueCodeId] = '';
+                            extraButton.textContent = `Select ${list.name}...`;
+                            extraButton.classList.remove('selected');
+                            clearOpt.style.display = 'none';
+                            extraOptionsDiv.classList.remove('active');
+                            saveDataToStorage();
+                        });
+                        extraOptionsDiv.appendChild(clearOpt);
+
+                        list.options.forEach(opt => {
+                            const optDiv = document.createElement('div');
+                            optDiv.className = 'status-option';
+                            optDiv.textContent = opt;
+                            optDiv.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                appState.ecsExtraData[list.id][uniqueCodeId] = opt;
+                                extraButton.textContent = opt;
+                                extraButton.classList.add('selected');
+                                clearOpt.style.display = 'block';
+                                extraOptionsDiv.classList.remove('active');
+                                saveDataToStorage();
+                            });
+                            extraOptionsDiv.appendChild(optDiv);
+                        });
+
+                        extraButton.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            document.querySelectorAll('.status-options').forEach(el => {
+                                if (el !== extraOptionsDiv) el.classList.remove('active');
+                            });
+                            extraOptionsDiv.classList.toggle('active');
+                        });
+
+                        // Restore saved value
+                        const savedExtra = (appState.ecsExtraData[list.id] || {})[uniqueCodeId];
+                        if (savedExtra) {
+                            extraButton.textContent = savedExtra;
+                            extraButton.classList.add('selected');
+                            clearOpt.style.display = 'block';
+                        }
+
+                        extraWrapper.appendChild(extraButton);
+                        extraWrapper.appendChild(extraOptionsDiv);
+                        controlsRow.appendChild(extraWrapper);
+                    });
+                }
+
                 controlsCell.appendChild(controlsRow);
                 rowDiv.appendChild(controlsCell);
 
@@ -5263,8 +5586,12 @@ barcodeWrapper.appendChild(barcodeInput);
             removeBtn.title = 'Remove — pick a different code';
             removeBtn.textContent = '✕ Remove';
             removeBtn.addEventListener('click', () => {
-                const { state } = getEcsQuickEntryState();
+                const { roomName: rn, state } = getEcsQuickEntryState();
                 state.confirmedCodes.splice(idx, 1);
+                // Clear saved status and comment so the sync block doesn't re-add this code
+                const uid = `${rn}-${code}`;
+                if (appState.checkData) appState.checkData[uid] = null;
+                if (appState.codeSpecificComments) appState.codeSpecificComments[uid] = '';
                 saveDataToStorage();
                 renderEcsQuickEntryMode();
             });
@@ -5852,7 +6179,8 @@ barcodeWrapper.appendChild(barcodeInput);
             const codesForCurrentRoom = appState.roomCodes[currentRoomName] || [];
             const codeStatusOptions = getCodeStatusOptions();
             const commentOptions = getCommentOptions();
-
+            const allLists = getEcsDropdownLists();
+            const extraLists = allLists.slice(2);
 
             codesForCurrentRoom.forEach(code => {
                 const uniqueCodeId = `${currentRoomName}-${code}`;
@@ -5894,6 +6222,21 @@ barcodeWrapper.appendChild(barcodeInput);
                         customInput.value = '';
                     }
                 }
+
+                // Update extra list buttons
+                extraLists.forEach(list => {
+                    const savedVal = (appState.ecsExtraData && appState.ecsExtraData[list.id] && appState.ecsExtraData[list.id][uniqueCodeId]) || '';
+                    const extraBtn = document.querySelector(`[data-role="extra-btn-${list.id}"][data-code-id="${uniqueCodeId}"]`);
+                    if (extraBtn) {
+                        if (savedVal) {
+                            extraBtn.textContent = savedVal;
+                            extraBtn.classList.add('selected');
+                        } else {
+                            extraBtn.textContent = `Select ${list.name}...`;
+                            extraBtn.classList.remove('selected');
+                        }
+                    }
+                });
             });
         }
 
@@ -5924,9 +6267,10 @@ barcodeWrapper.appendChild(barcodeInput);
             prevBtn.disabled = appState.currentSeStSvRoomIndex === 0;
             
             if (appState.currentSeStSvRoomIndex === appState.seStSvRooms.length - 1) {
-                nextBtn.style.display = 'none'; // Hide the button when at last room
+                nextBtn.style.display = 'block';
+                nextBtn.textContent = 'Complete';
             } else {
-                nextBtn.style.display = 'block'; // Show the button when not at last room
+                nextBtn.style.display = 'block';
                 nextBtn.textContent = 'Next Room';
             }
         }
@@ -6096,8 +6440,11 @@ barcodeWrapper.appendChild(barcodeInput);
         function exportCodeToCsv() {
             try {
                 const codeStatusOptions = getCodeStatusOptions();
-                let csvContent = 'Room,Code,Status,Comment,Room_Status\n';
-                
+                const allLists = getEcsDropdownLists();
+                const extraLists = allLists.slice(2);
+                const extraHeaders = extraLists.map(l => '"' + l.name.replace(/"/g, '""') + '"').join(',');
+                let csvContent = 'Room,Code,Status,Comment' + (extraHeaders ? ',' + extraHeaders : '') + ',Room_Status\n';
+
                 for (const room in appState.roomCodes) {
                     appState.roomCodes[room].forEach(code => {
                         const uniqueCodeId = `${room}-${code}`;
@@ -6105,11 +6452,17 @@ barcodeWrapper.appendChild(barcodeInput);
                         const status = (statusIndex !== null && statusIndex !== undefined) ? codeStatusOptions[statusIndex] : '';
                         const comment = appState.codeSpecificComments[uniqueCodeId] || '';
                         const room_status = appState.roomStatus[room] || '';
-        
-                        csvContent += `"${room}","${code}","${status}","${comment.replace(/"/g, '""')}","${room_status}"\n`;
+                        let extraVals = '';
+                        if (extraLists.length) {
+                            extraVals = ',' + extraLists.map(l => {
+                                const val = (appState.ecsExtraData && appState.ecsExtraData[l.id] && appState.ecsExtraData[l.id][uniqueCodeId]) || '';
+                                return '"' + val.replace(/"/g, '""') + '"';
+                            }).join(',');
+                        }
+                        csvContent += '"' + room + '","' + code + '","' + status + '","' + comment.replace(/"/g, '""') + '"' + extraVals + ',"' + room_status + '"\n';
                     });
                 }
-                
+
                 downloadCsvFile(csvContent, `code_inspection_${new Date().toISOString().split('T')[0]}.csv`);
             } catch (error) {
                 console.error('Export failed:', error);
@@ -6117,7 +6470,7 @@ barcodeWrapper.appendChild(barcodeInput);
             }
         }
 
-        function exportSeStSvToCsv() {
+                function exportSeStSvToCsv() {
             try {
                 let csvContent = 'Room,SE,ST,SV\n';
                 
@@ -6186,6 +6539,7 @@ barcodeWrapper.appendChild(barcodeInput);
             } else if (type === 'code') {
                 appState.roomCodes = {};
                 appState.codeSpecificComments = {};
+                appState.ecsExtraData = {};
                 codeListTextarea.value = '';
             } else if (type === 'assetTagz2') {
                 appState.assetTagz2 = { roomCodes: {}, currentRoomIndex: 0, statusByCodeId: {}, commentsByCodeId: {}, barcodesByCodeId: {}, barcodePresets: [] };
@@ -6337,6 +6691,8 @@ barcodeWrapper.appendChild(barcodeInput);
             // Custom dropdown options (only if non-default)
             if (state.customStatusOptions  && state.customStatusOptions.length)  m.cso = state.customStatusOptions;
             if (state.customCommentOptions && state.customCommentOptions.length) m.cco = state.customCommentOptions;
+            if (state.ecsDropdownLists     && state.ecsDropdownLists.length)     m.edl = state.ecsDropdownLists;
+            if (state.ecsExtraData         && Object.keys(state.ecsExtraData || {}).length) m.eed = state.ecsExtraData;
             if (state.ecsQuickEntryMode)                                          m.qe  = 1;
             if (state.ecsQuickEntryState && Object.keys(state.ecsQuickEntryState || {}).length) m.qes = state.ecsQuickEntryState;
 
@@ -6401,6 +6757,8 @@ barcodeWrapper.appendChild(barcodeInput);
                 seStSvData:             m.sd  || {},
                 customStatusOptions:    m.cso || [],
                 customCommentOptions:   m.cco || [],
+                ecsDropdownLists:       m.edl || [],
+                ecsExtraData:           m.eed || {},
                 ecsQuickEntryMode:      !!m.qe,
                 ecsQuickEntryState:     m.qes || {},
                 assetTagz2: {
@@ -7870,7 +8228,7 @@ function renderFlexBarcodeRows() {
         const grid = document.getElementById('photoGrid');
         const title = document.getElementById('photoModalTitle');
 
-        title.textContent = `📷 ${ecsCode} — ${roomName}`;
+        title.textContent = `${ecsCode} — ${roomName}`;
         grid.innerHTML = '';
 
         const photos = await getPhotosByCodeId(codeId);
@@ -8168,17 +8526,10 @@ function renderFlexBarcodeRows() {
         }
     }, true);
 
-    // ── Event delegation — comment select change ──────────────────────
-    document.addEventListener('change', function(e) {
-        const container = document.getElementById('assetTagz2ChecksContainer');
-        if (!container || !container.contains(e.target)) return;
-        if (e.target.classList.contains('comment-textarea')) {
-            const codeId = e.target.dataset.codeId;
-            if (codeId && e.target.value && e.target.value !== '__custom__') {
-                setTimeout(() => _showCameraForAt2CodeId(codeId), 50);
-            }
-        }
-    });
+    // ── Event delegation — AT2 comment selection (camera trigger now in selectAt2Comment) ──
+    // The old comment-textarea <select> change event is no longer used; camera is triggered
+    // directly inside selectAt2Comment() for preset choices and by the input delegation below
+    // for custom text entries.
 
     // ── Event delegation — custom comment textarea input ─────────────
     document.addEventListener('input', function(e) {
