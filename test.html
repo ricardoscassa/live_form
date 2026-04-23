@@ -350,7 +350,7 @@
             white-space: nowrap;
         }
 
-        /* Delete List — strong red, clearly destructive */
+        /* Delete List — strong red text button, clearly destructive */
         .dropdown-editor-btn.remove {
             background: #dc3545;
             color: white;
@@ -359,13 +359,85 @@
             background: #b02030;
         }
 
-        /* Remove option — softer coral, less alarming than Delete List */
-        .dropdown-editor-btn.remove-opt {
-            background: #e8694a;
-            color: white;
+        /* iOS-style red circle minus — remove a single option */
+        .dd-remove-circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #ff3b30;
+            border: none;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+            padding: 0;
         }
-        .dropdown-editor-btn.remove-opt:hover {
-            background: #c9522f;
+        .dd-remove-circle:hover { background: #d4261b; }
+        .dd-remove-circle:active { transform: scale(0.88); }
+        .dd-remove-circle::before {
+            content: '';
+            display: block;
+            width: 12px;
+            height: 2.5px;
+            background: #fff;
+            border-radius: 2px;
+        }
+        .dd-remove-circle:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* iOS-style green circle plus — add option row */
+        .dd-add-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            background: none;
+            border: none;
+            padding: 4px 2px;
+        }
+        .dd-add-row:hover .dd-add-circle { background: #248a3d; }
+        .dd-add-circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #34c759;
+            flex-shrink: 0;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .dd-add-row:active .dd-add-circle { transform: scale(0.88); }
+        .dd-add-circle::before,
+        .dd-add-circle::after {
+            content: '';
+            position: absolute;
+            background: #fff;
+            border-radius: 2px;
+        }
+        .dd-add-circle {
+            position: relative;
+        }
+        .dd-add-circle::before {
+            width: 12px;
+            height: 2.5px;
+        }
+        .dd-add-circle::after {
+            width: 2.5px;
+            height: 12px;
+        }
+        .dd-add-label {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #34c759;
         }
 
         .dropdown-editor-btn.remove:disabled,
@@ -3935,10 +4007,9 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                         });
 
                         const removeOptBtn = document.createElement('button');
-                        removeOptBtn.className = 'dropdown-editor-btn remove-opt';
-                        removeOptBtn.textContent = 'Remove';
+                        removeOptBtn.className = 'dd-remove-circle';
+                        removeOptBtn.title = isOnlyOpt ? 'At least one option must remain' : 'Remove option';
                         removeOptBtn.disabled = isOnlyOpt;
-                        if (isOnlyOpt) removeOptBtn.title = 'At least one option must remain';
                         removeOptBtn.addEventListener('click', () => {
                             if (list.options.length <= 1) {
                                 showMessageModal('Cannot Remove', 'At least one option must remain in each list.');
@@ -3956,10 +4027,17 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     });
                 };
 
-                // ── Add option button (created here so show/hide can reference it) ──
+                // ── Add option button — iOS-style green circle + label ──
                 const addOptBtn = document.createElement('button');
-                addOptBtn.className = 'dropdown-editor-btn add';
-                addOptBtn.textContent = '+ Add Option';
+                addOptBtn.className = 'dd-add-row';
+                addOptBtn.type = 'button';
+                const addCircle = document.createElement('span');
+                addCircle.className = 'dd-add-circle';
+                const addLabel = document.createElement('span');
+                addLabel.className = 'dd-add-label';
+                addLabel.textContent = 'Add Option';
+                addOptBtn.appendChild(addCircle);
+                addOptBtn.appendChild(addLabel);
                 addOptBtn.addEventListener('click', () => {
                     list.options.push('New Option');
                     saveDataToStorage();
