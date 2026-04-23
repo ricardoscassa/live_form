@@ -3508,7 +3508,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('addEcsDropdownList').addEventListener('click', function() {
                 const lists = getEcsDropdownLists();
                 const newId = 'list-extra-' + Date.now();
-                lists.push({ id: newId, name: 'New List', options: ['Option 1'] });
+                lists.push({ id: newId, name: 'New List', type: 'select', options: ['Option 1'] });
                 if (!appState.ecsExtraData) appState.ecsExtraData = {};
                 appState.ecsExtraData[newId] = {};
                 saveDataToStorage();
@@ -3696,8 +3696,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 const commentOpts = (Array.isArray(appState.customCommentOptions) && appState.customCommentOptions.length)
                     ? appState.customCommentOptions : [...defaultCommentOptions];
                 appState.ecsDropdownLists = [
-                    { id: 'list-status',  name: 'Status',  options: statusOpts  },
-                    { id: 'list-comment', name: 'Comment', options: commentOpts }
+                    { id: 'list-status',  name: 'Status',  type: 'select', options: statusOpts  },
+                    { id: 'list-comment', name: 'Comment', type: 'select', options: commentOpts }
                 ];
             }
             return appState.ecsDropdownLists;
@@ -3785,6 +3785,39 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 // Prevent drag from firing when typing in the name input
                 nameInput.addEventListener('mousedown', e => e.stopPropagation());
 
+                // ── Type toggle: Dropdown ↔ Text ──
+                const typeToggleWrap = document.createElement('div');
+                typeToggleWrap.style.cssText = 'display:flex;align-items:center;gap:6px;flex-shrink:0;';
+
+                const typeLabelA = document.createElement('span');
+                typeLabelA.textContent = 'Dropdown';
+                typeLabelA.style.cssText = 'font-size:0.78rem;font-weight:600;color:#555;white-space:nowrap;';
+
+                const typeToggle = document.createElement('label');
+                typeToggle.className = 'ecs-ios-toggle';
+                typeToggle.style.cssText = 'cursor:pointer;display:flex;align-items:center;';
+
+                const typeCheckbox = document.createElement('input');
+                typeCheckbox.type = 'checkbox';
+                typeCheckbox.style.cssText = 'position:absolute;opacity:0;width:0;height:0;';
+                typeCheckbox.checked = (list.type === 'text');
+
+                const typeTrack = document.createElement('span');
+                typeTrack.className = 'ecs-ios-toggle-track';
+                const typeThumb = document.createElement('span');
+                typeThumb.className = 'ecs-ios-toggle-thumb';
+                typeTrack.appendChild(typeThumb);
+                typeToggle.appendChild(typeCheckbox);
+                typeToggle.appendChild(typeTrack);
+
+                const typeLabelB = document.createElement('span');
+                typeLabelB.textContent = 'Text';
+                typeLabelB.style.cssText = 'font-size:0.78rem;font-weight:600;color:#555;white-space:nowrap;';
+
+                typeToggleWrap.appendChild(typeLabelA);
+                typeToggleWrap.appendChild(typeToggle);
+                typeToggleWrap.appendChild(typeLabelB);
+
                 const deleteListBtn = document.createElement('button');
                 deleteListBtn.className = 'dropdown-editor-btn remove';
                 deleteListBtn.textContent = 'Delete List';
@@ -3803,6 +3836,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
 
                 headerRow.appendChild(listDragHandle);
                 headerRow.appendChild(nameInput);
+                headerRow.appendChild(typeToggleWrap);
                 headerRow.appendChild(deleteListBtn);
                 card.appendChild(headerRow);
 
@@ -3893,10 +3927,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                         optionsList.appendChild(item);
                     });
                 };
-                renderOptions();
-                card.appendChild(optionsList);
 
-                // ── Add option button ──
+                // ── Add option button (created here so show/hide can reference it) ──
                 const addOptBtn = document.createElement('button');
                 addOptBtn.className = 'dropdown-editor-btn add';
                 addOptBtn.textContent = '+ Add Option';
@@ -3905,8 +3937,24 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     saveDataToStorage();
                     renderOptions();
                 });
-                card.appendChild(addOptBtn);
 
+                renderOptions();
+
+                // Show/hide options section based on current type
+                const isTextType = (list.type === 'text');
+                optionsList.style.display = isTextType ? 'none' : '';
+                addOptBtn.style.display   = isTextType ? 'none' : '';
+
+                // Wire type toggle
+                typeCheckbox.addEventListener('change', () => {
+                    list.type = typeCheckbox.checked ? 'text' : 'select';
+                    optionsList.style.display = typeCheckbox.checked ? 'none' : '';
+                    addOptBtn.style.display   = typeCheckbox.checked ? 'none' : '';
+                    saveDataToStorage();
+                });
+
+                card.appendChild(optionsList);
+                card.appendChild(addOptBtn);
                 container.appendChild(card);
             });
         }
@@ -4222,6 +4270,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             appState.customStatusOptions = Array.isArray(appState.customStatusOptions) ? appState.customStatusOptions : [];
             appState.customCommentOptions = Array.isArray(appState.customCommentOptions) ? appState.customCommentOptions : [];
             if (!Array.isArray(appState.ecsDropdownLists)) appState.ecsDropdownLists = [];
+            // Ensure every list has a type field (backwards compat with saves before type was added)
+            appState.ecsDropdownLists.forEach(l => { if (!l.type) l.type = 'select'; });
             if (!appState.ecsExtraData || typeof appState.ecsExtraData !== 'object') appState.ecsExtraData = {};
             if (typeof appState.ecsQuickEntryMode !== 'boolean') appState.ecsQuickEntryMode = false;
             if (!appState.ecsQuickEntryState || typeof appState.ecsQuickEntryState !== 'object') appState.ecsQuickEntryState = {};
@@ -5575,67 +5625,78 @@ barcodeWrapper.appendChild(barcodeInput);
                         extraLabel.textContent = list.name;
                         extraWrapper.appendChild(extraLabel);
 
-                        const extraButton = document.createElement('button');
-                        extraButton.className = 'status-button';
-                        extraButton.textContent = `Select ${list.name}...`;
-                        extraButton.dataset.codeId = uniqueCodeId;
-                        extraButton.dataset.role = `extra-btn-${list.id}`;
+                        const savedExtra = (appState.ecsExtraData[list.id] || {})[uniqueCodeId] || '';
 
-                        const extraOptionsDiv = document.createElement('div');
-                        extraOptionsDiv.className = 'status-options';
-                        extraOptionsDiv.dataset.codeId = uniqueCodeId;
-                        extraOptionsDiv.dataset.role = `extra-options-${list.id}`;
+                        if (list.type === 'text') {
+                            // ── Free-text input ──
+                            const textInput = document.createElement('input');
+                            textInput.type = 'text';
+                            textInput.className = 'status-button';
+                            textInput.style.cssText = 'cursor:text;padding-right:12px;';
+                            textInput.placeholder = list.name + '...';
+                            textInput.value = savedExtra;
+                            textInput.addEventListener('input', () => {
+                                appState.ecsExtraData[list.id][uniqueCodeId] = textInput.value;
+                                saveDataToStorage();
+                            });
+                            extraWrapper.appendChild(textInput);
+                        } else {
+                            // ── Select dropdown ──
+                            const extraButton = document.createElement('button');
+                            extraButton.className = 'status-button';
+                            extraButton.textContent = savedExtra || `Select ${list.name}...`;
+                            extraButton.dataset.codeId = uniqueCodeId;
+                            extraButton.dataset.role = `extra-btn-${list.id}`;
+                            if (savedExtra) extraButton.classList.add('selected');
 
-                        // Clear option
-                        const clearOpt = document.createElement('div');
-                        clearOpt.className = 'status-option clear-option';
-                        clearOpt.textContent = '✕  Clear selection';
-                        clearOpt.style.display = 'none';
-                        clearOpt.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            appState.ecsExtraData[list.id][uniqueCodeId] = '';
-                            extraButton.textContent = `Select ${list.name}...`;
-                            extraButton.classList.remove('selected');
-                            clearOpt.style.display = 'none';
-                            extraOptionsDiv.classList.remove('active');
-                            saveDataToStorage();
-                        });
-                        extraOptionsDiv.appendChild(clearOpt);
+                            const extraOptionsDiv = document.createElement('div');
+                            extraOptionsDiv.className = 'status-options';
+                            extraOptionsDiv.dataset.codeId = uniqueCodeId;
+                            extraOptionsDiv.dataset.role = `extra-options-${list.id}`;
 
-                        list.options.forEach(opt => {
-                            const optDiv = document.createElement('div');
-                            optDiv.className = 'status-option';
-                            optDiv.textContent = opt;
-                            optDiv.addEventListener('click', (e) => {
+                            const clearOpt = document.createElement('div');
+                            clearOpt.className = 'status-option clear-option';
+                            clearOpt.textContent = '\u2715  Clear selection';
+                            clearOpt.style.display = savedExtra ? 'block' : 'none';
+                            clearOpt.addEventListener('click', (e) => {
                                 e.stopPropagation();
-                                appState.ecsExtraData[list.id][uniqueCodeId] = opt;
-                                extraButton.textContent = opt;
-                                extraButton.classList.add('selected');
-                                clearOpt.style.display = 'block';
+                                appState.ecsExtraData[list.id][uniqueCodeId] = '';
+                                extraButton.textContent = `Select ${list.name}...`;
+                                extraButton.classList.remove('selected');
+                                clearOpt.style.display = 'none';
                                 extraOptionsDiv.classList.remove('active');
                                 saveDataToStorage();
                             });
-                            extraOptionsDiv.appendChild(optDiv);
-                        });
+                            extraOptionsDiv.appendChild(clearOpt);
 
-                        extraButton.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            document.querySelectorAll('.status-options').forEach(el => {
-                                if (el !== extraOptionsDiv) el.classList.remove('active');
+                            list.options.forEach(opt => {
+                                const optDiv = document.createElement('div');
+                                optDiv.className = 'status-option';
+                                optDiv.textContent = opt;
+                                optDiv.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+                                    appState.ecsExtraData[list.id][uniqueCodeId] = opt;
+                                    extraButton.textContent = opt;
+                                    extraButton.classList.add('selected');
+                                    clearOpt.style.display = 'block';
+                                    extraOptionsDiv.classList.remove('active');
+                                    saveDataToStorage();
+                                });
+                                extraOptionsDiv.appendChild(optDiv);
                             });
-                            extraOptionsDiv.classList.toggle('active');
-                        });
 
-                        // Restore saved value
-                        const savedExtra = (appState.ecsExtraData[list.id] || {})[uniqueCodeId];
-                        if (savedExtra) {
-                            extraButton.textContent = savedExtra;
-                            extraButton.classList.add('selected');
-                            clearOpt.style.display = 'block';
+                            extraButton.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                document.querySelectorAll('.status-options').forEach(el => {
+                                    if (el !== extraOptionsDiv) el.classList.remove('active');
+                                });
+                                extraOptionsDiv.classList.toggle('active');
+                            });
+
+                            extraWrapper.appendChild(extraButton);
+                            extraWrapper.appendChild(extraOptionsDiv);
                         }
 
-                        extraWrapper.appendChild(extraButton);
-                        extraWrapper.appendChild(extraOptionsDiv);
                         controlsRow.appendChild(extraWrapper);
                     });
                 }
@@ -6385,17 +6446,29 @@ barcodeWrapper.appendChild(barcodeInput);
                     }
                 }
 
-                // Update extra list buttons
+                // Update extra list controls (select button or text input)
                 extraLists.forEach(list => {
                     const savedVal = (appState.ecsExtraData && appState.ecsExtraData[list.id] && appState.ecsExtraData[list.id][uniqueCodeId]) || '';
-                    const extraBtn = document.querySelector(`[data-role="extra-btn-${list.id}"][data-code-id="${uniqueCodeId}"]`);
-                    if (extraBtn) {
-                        if (savedVal) {
-                            extraBtn.textContent = savedVal;
-                            extraBtn.classList.add('selected');
-                        } else {
-                            extraBtn.textContent = `Select ${list.name}...`;
-                            extraBtn.classList.remove('selected');
+                    if (list.type === 'text') {
+                        // Find the text input by its placeholder (no data-role on text inputs)
+                        const wrapper = [...document.querySelectorAll('#codeChecksContainer .control-wrapper')].find(w => {
+                            const lbl = w.querySelector('.control-label');
+                            return lbl && lbl.textContent === list.name && w.querySelector('input[type="text"].status-button');
+                        });
+                        if (wrapper) {
+                            const inp = wrapper.querySelector('input[type="text"].status-button');
+                            if (inp) inp.value = savedVal;
+                        }
+                    } else {
+                        const extraBtn = document.querySelector(`[data-role="extra-btn-${list.id}"][data-code-id="${uniqueCodeId}"]`);
+                        if (extraBtn) {
+                            if (savedVal) {
+                                extraBtn.textContent = savedVal;
+                                extraBtn.classList.add('selected');
+                            } else {
+                                extraBtn.textContent = `Select ${list.name}...`;
+                                extraBtn.classList.remove('selected');
+                            }
                         }
                     }
                 });
