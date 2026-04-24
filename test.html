@@ -6237,16 +6237,16 @@ barcodeWrapper.appendChild(barcodeInput);
                 const { state } = getEcsQuickEntryState();
                 state.confirmedCodes.push(code);
                 saveDataToStorage();
-
-                // Save scroll position before full re-render wipes the DOM
-                const savedScrollY = window.scrollY;
                 renderEcsQuickEntryMode();
 
-                // Restore position and focus without triggering iOS auto-scroll
+                // After re-render the input row is always the last element.
+                // Scroll it into view at the bottom of the viewport, then focus without scroll.
                 const newInput = document.querySelector('.ecs-quick-entry-container .ecs-quick-input');
                 if (newInput) {
-                    window.scrollTo({ top: savedScrollY, behavior: 'instant' });
-                    newInput.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+                    const inputRow = newInput.closest('.ecs-quick-entry-row') || newInput;
+                    const rect = inputRow.getBoundingClientRect();
+                    const targetScrollY = window.scrollY + rect.bottom - window.innerHeight + 24;
+                    window.scrollTo({ top: Math.max(0, targetScrollY), behavior: 'instant' });
                     newInput.focus({ preventScroll: true });
                 }
             }
