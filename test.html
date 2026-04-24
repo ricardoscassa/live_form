@@ -6239,16 +6239,19 @@ barcodeWrapper.appendChild(barcodeInput);
                 saveDataToStorage();
                 renderEcsQuickEntryMode();
 
-                // After re-render the input row is always the last element.
-                // Scroll it into view at the bottom of the viewport, then focus without scroll.
-                const newInput = document.querySelector('.ecs-quick-entry-container .ecs-quick-input');
-                if (newInput) {
-                    const inputRow = newInput.closest('.ecs-quick-entry-row') || newInput;
-                    const rect = inputRow.getBoundingClientRect();
-                    const targetScrollY = window.scrollY + rect.bottom - window.innerHeight + 24;
-                    window.scrollTo({ top: Math.max(0, targetScrollY), behavior: 'instant' });
-                    newInput.focus({ preventScroll: true });
-                }
+                // After re-render: scroll to the just-confirmed card (the last confirmed row).
+                // Do NOT focus the input — that would reopen the keyboard and scroll to it.
+                // The user can tap the Type ECS field themselves when ready for the next code.
+                requestAnimationFrame(() => {
+                    const confirmedRows = document.querySelectorAll('.ecs-quick-entry-row.confirmed');
+                    const lastConfirmed = confirmedRows[confirmedRows.length - 1];
+                    if (lastConfirmed) {
+                        const rect = lastConfirmed.getBoundingClientRect();
+                        // Scroll so the just-confirmed card's bottom sits near the middle/upper part of viewport
+                        const targetScrollY = window.scrollY + rect.top - 100;
+                        window.scrollTo({ top: Math.max(0, targetScrollY), behavior: 'smooth' });
+                    }
+                });
             }
 
             // Input events
