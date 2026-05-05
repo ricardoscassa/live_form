@@ -3647,6 +3647,114 @@ rooms: [],
             return getEcsDropdownLists()[1];
         }
 
+        // Renders the "extra" dropdown list columns (lists[2], lists[3], …)
+        // for a single ECS code row, and appends them to controlsRow.
+        //
+        // Used by both the List view (generateCodeCheckItems) and the
+        // Search/Quick Entry view (buildConfirmedRow). Without this shared
+        // helper the Search view did not show user-defined extra lists at all.
+        //
+        // Each extra list is rendered as either:
+        //   • text input  — when list.type === 'text'
+        //   • dropdown    — otherwise (button + options panel)
+        // Storage key for extras: appState.ecsExtraData[list.id][uniqueCodeId]
+        //
+        // Selectors used by updateCodeCheckStates() to refresh values:
+        //   data-role="extra-btn-${list.id}"      (dropdown button)
+        //   data-role="extra-options-${list.id}"  (dropdown options panel)
+        //   text inputs are matched by parent .control-label text
+        function appendEcsExtraListColumns(controlsRow, uniqueCodeId) {
+            const allLists = getEcsDropdownLists();
+            if (allLists.length <= 2) return;
+
+            if (!appState.ecsExtraData) appState.ecsExtraData = {};
+            allLists.slice(2).forEach(list => {
+                if (!appState.ecsExtraData[list.id]) appState.ecsExtraData[list.id] = {};
+                const extraWrapper = document.createElement('div');
+                extraWrapper.className = 'control-wrapper';
+                extraWrapper.style.position = 'relative';
+
+                const extraLabel = document.createElement('div');
+                extraLabel.className = 'control-label';
+                extraLabel.textContent = list.name;
+                extraWrapper.appendChild(extraLabel);
+
+                const savedExtra = (appState.ecsExtraData[list.id] || {})[uniqueCodeId] || '';
+
+                if (list.type === 'text') {
+                    // ── Free-text input ──
+                    const textInput = document.createElement('input');
+                    textInput.type = 'text';
+                    textInput.className = 'status-button';
+                    textInput.style.cssText = 'cursor:text;padding-right:12px;';
+                    textInput.placeholder = list.name + '...';
+                    textInput.value = savedExtra;
+                    textInput.addEventListener('input', () => {
+                        appState.ecsExtraData[list.id][uniqueCodeId] = textInput.value;
+                        saveDataToStorage();
+                    });
+                    extraWrapper.appendChild(textInput);
+                } else {
+                    // ── Select dropdown ──
+                    const extraButton = document.createElement('button');
+                    extraButton.className = 'status-button';
+                    extraButton.textContent = savedExtra || `Select ${list.name}...`;
+                    extraButton.dataset.codeId = uniqueCodeId;
+                    extraButton.dataset.role = `extra-btn-${list.id}`;
+                    if (savedExtra) extraButton.classList.add('selected');
+
+                    const extraOptionsDiv = document.createElement('div');
+                    extraOptionsDiv.className = 'status-options';
+                    extraOptionsDiv.dataset.codeId = uniqueCodeId;
+                    extraOptionsDiv.dataset.role = `extra-options-${list.id}`;
+
+                    const clearOpt = document.createElement('div');
+                    clearOpt.className = 'status-option clear-option';
+                    clearOpt.textContent = '\u2715  Clear selection';
+                    clearOpt.style.display = savedExtra ? 'block' : 'none';
+                    clearOpt.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        appState.ecsExtraData[list.id][uniqueCodeId] = '';
+                        extraButton.textContent = `Select ${list.name}...`;
+                        extraButton.classList.remove('selected');
+                        clearOpt.style.display = 'none';
+                        extraOptionsDiv.classList.remove('active');
+                        saveDataToStorage();
+                    });
+                    extraOptionsDiv.appendChild(clearOpt);
+
+                    list.options.forEach(opt => {
+                        const optDiv = document.createElement('div');
+                        optDiv.className = 'status-option';
+                        optDiv.textContent = opt;
+                        optDiv.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            appState.ecsExtraData[list.id][uniqueCodeId] = opt;
+                            extraButton.textContent = opt;
+                            extraButton.classList.add('selected');
+                            clearOpt.style.display = 'block';
+                            extraOptionsDiv.classList.remove('active');
+                            saveDataToStorage();
+                        });
+                        extraOptionsDiv.appendChild(optDiv);
+                    });
+
+                    extraButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.status-options').forEach(el => {
+                            if (el !== extraOptionsDiv) el.classList.remove('active');
+                        });
+                        extraOptionsDiv.classList.toggle('active');
+                    });
+
+                    extraWrapper.appendChild(extraButton);
+                    extraWrapper.appendChild(extraOptionsDiv);
+                }
+
+                controlsRow.appendChild(extraWrapper);
+            });
+        }
+
         // DOM elements
         const roomListTextarea = document.getElementById('roomList');
         const codeListTextarea = document.getElementById('codeList');
@@ -6145,95 +6253,8 @@ barcodeWrapper.appendChild(barcodeInput);
                 }
 
                 // ── Extra dropdown lists (lists[2], lists[3], …) ──────────────
-                const allLists = getEcsDropdownLists();
-                if (allLists.length > 2) {
-                    if (!appState.ecsExtraData) appState.ecsExtraData = {};
-                    allLists.slice(2).forEach(list => {
-                        if (!appState.ecsExtraData[list.id]) appState.ecsExtraData[list.id] = {};
-                        const extraWrapper = document.createElement('div');
-                        extraWrapper.className = 'control-wrapper';
-                        extraWrapper.style.position = 'relative';
-
-                        const extraLabel = document.createElement('div');
-                        extraLabel.className = 'control-label';
-                        extraLabel.textContent = list.name;
-                        extraWrapper.appendChild(extraLabel);
-
-                        const savedExtra = (appState.ecsExtraData[list.id] || {})[uniqueCodeId] || '';
-
-                        if (list.type === 'text') {
-                            // ── Free-text input ──
-                            const textInput = document.createElement('input');
-                            textInput.type = 'text';
-                            textInput.className = 'status-button';
-                            textInput.style.cssText = 'cursor:text;padding-right:12px;';
-                            textInput.placeholder = list.name + '...';
-                            textInput.value = savedExtra;
-                            textInput.addEventListener('input', () => {
-                                appState.ecsExtraData[list.id][uniqueCodeId] = textInput.value;
-                                saveDataToStorage();
-                            });
-                            extraWrapper.appendChild(textInput);
-                        } else {
-                            // ── Select dropdown ──
-                            const extraButton = document.createElement('button');
-                            extraButton.className = 'status-button';
-                            extraButton.textContent = savedExtra || `Select ${list.name}...`;
-                            extraButton.dataset.codeId = uniqueCodeId;
-                            extraButton.dataset.role = `extra-btn-${list.id}`;
-                            if (savedExtra) extraButton.classList.add('selected');
-
-                            const extraOptionsDiv = document.createElement('div');
-                            extraOptionsDiv.className = 'status-options';
-                            extraOptionsDiv.dataset.codeId = uniqueCodeId;
-                            extraOptionsDiv.dataset.role = `extra-options-${list.id}`;
-
-                            const clearOpt = document.createElement('div');
-                            clearOpt.className = 'status-option clear-option';
-                            clearOpt.textContent = '\u2715  Clear selection';
-                            clearOpt.style.display = savedExtra ? 'block' : 'none';
-                            clearOpt.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                appState.ecsExtraData[list.id][uniqueCodeId] = '';
-                                extraButton.textContent = `Select ${list.name}...`;
-                                extraButton.classList.remove('selected');
-                                clearOpt.style.display = 'none';
-                                extraOptionsDiv.classList.remove('active');
-                                saveDataToStorage();
-                            });
-                            extraOptionsDiv.appendChild(clearOpt);
-
-                            list.options.forEach(opt => {
-                                const optDiv = document.createElement('div');
-                                optDiv.className = 'status-option';
-                                optDiv.textContent = opt;
-                                optDiv.addEventListener('click', (e) => {
-                                    e.stopPropagation();
-                                    appState.ecsExtraData[list.id][uniqueCodeId] = opt;
-                                    extraButton.textContent = opt;
-                                    extraButton.classList.add('selected');
-                                    clearOpt.style.display = 'block';
-                                    extraOptionsDiv.classList.remove('active');
-                                    saveDataToStorage();
-                                });
-                                extraOptionsDiv.appendChild(optDiv);
-                            });
-
-                            extraButton.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                document.querySelectorAll('.status-options').forEach(el => {
-                                    if (el !== extraOptionsDiv) el.classList.remove('active');
-                                });
-                                extraOptionsDiv.classList.toggle('active');
-                            });
-
-                            extraWrapper.appendChild(extraButton);
-                            extraWrapper.appendChild(extraOptionsDiv);
-                        }
-
-                        controlsRow.appendChild(extraWrapper);
-                    });
-                }
+                // Shared with buildConfirmedRow (Search/Quick Entry view)
+                appendEcsExtraListColumns(controlsRow, uniqueCodeId);
 
                 controlsCell.appendChild(controlsRow);
                 rowDiv.appendChild(controlsCell);
@@ -6523,6 +6544,12 @@ barcodeWrapper.appendChild(barcodeInput);
                 }
                 controlsRow.appendChild(commentWrapper);
             }
+
+            // ── Extra dropdown lists (lists[2], lists[3], …) ──────────────
+            // Shared with generateCodeCheckItems (List view). Without this
+            // call the Search/Quick Entry view did not show user-defined
+            // extra lists at all.
+            appendEcsExtraListColumns(controlsRow, uniqueCodeId);
 
             row.appendChild(controlsRow);
 
