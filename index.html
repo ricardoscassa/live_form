@@ -747,6 +747,11 @@
             border-color: #28a745;
         }
 
+        .check-item.checked-no {
+          background: #fff1f2;
+          border-color: #dc3545;
+        }
+      
         .check-label {
             font-weight: 600;
             margin-bottom: 15px;
@@ -4951,18 +4956,23 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     }
                 });
             });
-
-            // Update check item backgrounds
-            document.querySelectorAll('.check-item').forEach((item, index) => {
-                const value = roomData[index];
-                if (value === 1) {
-                    item.classList.add('checked');
-                } else {
-                    item.classList.remove('checked');
-                }
-            });
+          // Update check item backgrounds
+          document.querySelectorAll('.check-item').forEach((item, index) => {
+              const value = roomData[index];
+          
+              if (value === 1) {
+                  item.classList.add('checked');
+                  item.classList.remove('checked-no');
+              } else if (value === 0) {
+                  item.classList.add('checked-no');
+                  item.classList.remove('checked');
+              } else {
+                  item.classList.remove('checked');
+                  item.classList.remove('checked-no');
+              }
+          });
+          
         }
-
 
         // ============================================================================
         //  STATUS COLOURING — dropdown colour helpers tied to room status
