@@ -1526,6 +1526,170 @@
             padding: 12px;
             font-size: 1rem;
         }
+
+        #ecsGlobalSearchModal {
+            z-index: 11000;
+        }
+
+        .ecs-global-search-modal {
+            max-width: 620px;
+            text-align: left;
+            padding: 22px;
+        }
+
+        .ecs-global-search-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .ecs-global-search-header h3 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 1.25rem;
+            letter-spacing: 0;
+        }
+
+        .ecs-global-search-close {
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-radius: 50%;
+            background: #f2f4f7;
+            color: #344054;
+            cursor: pointer;
+            font-size: 1.35rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ecs-global-search-input {
+            width: 100%;
+            min-height: 52px;
+            padding: 13px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            color: #1f2937;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .ecs-global-search-input:focus {
+            border-color: #FF6B00;
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+        }
+
+        .ecs-global-search-current {
+            margin: 10px 0 12px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #667085;
+        }
+
+        .ecs-global-search-results {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: min(54vh, 430px);
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .ecs-global-search-empty {
+            padding: 22px 12px;
+            text-align: center;
+            color: #667085;
+            font-weight: 600;
+        }
+
+        .ecs-global-result {
+            border: 1px solid #e4e7ec;
+            border-radius: 12px;
+            background: #fff;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(16, 24, 40, 0.06);
+        }
+
+        .ecs-global-result-main {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .ecs-global-result-code {
+            color: #111827;
+            font-size: 1rem;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .ecs-global-result-room {
+            margin-top: 3px;
+            color: #667085;
+            font-size: 0.84rem;
+            font-weight: 650;
+            overflow-wrap: anywhere;
+        }
+
+        .ecs-global-result-badge {
+            flex-shrink: 0;
+            border-radius: 999px;
+            background: #fff1e8;
+            color: #FF6B00;
+            padding: 5px 9px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .ecs-global-result-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .ecs-global-result-action {
+            min-height: 42px;
+            border: 1px solid #d0d5dd;
+            border-radius: 10px;
+            background: #fff;
+            color: #344054;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.88rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ecs-global-result-action.primary {
+            border-color: transparent;
+            background: linear-gradient(135deg, #FF6B00 0%, #ff8a38 100%);
+            color: #fff;
+        }
+
+        .ecs-global-result-action:disabled {
+            opacity: 0.48;
+            cursor: default;
+        }
+
+        .ecs-code-search-hit {
+            animation: ecsCodeSearchPulse 1.8s ease;
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.28), 0 10px 24px rgba(255, 107, 0, 0.16) !important;
+        }
+
+        @keyframes ecsCodeSearchPulse {
+            0% { background: #fff7ed; }
+            100% { background: #fff; }
+        }
         
         /* Responsive Design - Enhanced for iOS */
         @media (max-width: 768px) {
@@ -3107,6 +3271,7 @@ Room Codes (Room- Codes)
                         <button id="shareCodeCheckPage" class="bottom-nav-btn" aria-label="QR Code"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 17h1v1h-1z"/></svg><span>QR</span></button>
                         <div class="bottom-nav-divider" role="separator"></div>
                         <button type="button" class="bottom-nav-btn bottom-nav-photo-btn" aria-label="Download Photos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5L5 20"/></svg><span>Photos</span></button>
+                        <button id="openEcsGlobalSearchDesktop" type="button" class="bottom-nav-btn bottom-nav-desktop-btn" aria-label="Find ECS Code"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg><span>Find</span></button>
                         <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="downloadJsonCodeCheckPage" aria-label="Download JSON"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>JSON</span></button>
                         <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn bottom-nav-danger" data-click-target="backToCodeInput" aria-label="Back to Input"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg><span>Back</span></button>
                         <button class="bottom-nav-btn bottom-nav-more-btn" type="button" aria-label="More options" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg><span>More</span></button>
@@ -3114,6 +3279,7 @@ Room Codes (Room- Codes)
                     <div class="bottom-nav-scrim" aria-hidden="true"></div>
                     <div class="bottom-nav-more-sheet" role="dialog" aria-label="More options" aria-modal="true">
                         <div class="bottom-nav-sheet-handle"></div>
+                        <button id="openEcsGlobalSearchMobile" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>Find ECS Code</button>
                         <button id="downloadJsonCodeCheckPage" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Data (JSON)</button>
                         <button id="backToCodeInput" class="bottom-nav-sheet-btn sheet-btn-danger"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Back to Input</button>
                     </div>
@@ -3522,6 +3688,25 @@ Room Codes (Room- Codes)
                     <button id="messageConfirm" class="button success" style="display: none;">Accept with Suffix</button>
                     <button id="messageCancel" class="button secondary" style="display: none;">Cancel</button>
                 </div>
+            </div>
+        </div>
+
+        <div id="ecsGlobalSearchModal" class="modal">
+            <div class="modal-content ecs-global-search-modal">
+                <div class="ecs-global-search-header">
+                    <h3>Find ECS code</h3>
+                    <button id="ecsGlobalSearchClose" class="ecs-global-search-close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <input
+                    id="ecsGlobalSearchInput"
+                    class="ecs-global-search-input"
+                    type="search"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Search uploaded ECS codes"
+                >
+                <div id="ecsGlobalSearchCurrentRoom" class="ecs-global-search-current"></div>
+                <div id="ecsGlobalSearchResults" class="ecs-global-search-results"></div>
             </div>
         </div>
     </div>
@@ -4068,6 +4253,19 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('downloadJsonCodeCheckPage').addEventListener('click', downloadJsonData);
             document.getElementById('shareCodeCheckPage').addEventListener('click', showShareModal);
             document.getElementById('backToCodeInput').addEventListener('click', backToCodeInput);
+            document.getElementById('openEcsGlobalSearchDesktop').addEventListener('click', showEcsGlobalSearchModal);
+            document.getElementById('openEcsGlobalSearchMobile').addEventListener('click', showEcsGlobalSearchModal);
+            document.getElementById('ecsGlobalSearchClose').addEventListener('click', hideEcsGlobalSearchModal);
+            document.getElementById('ecsGlobalSearchInput').addEventListener('input', renderEcsGlobalSearchResults);
+            document.getElementById('ecsGlobalSearchResults').addEventListener('click', handleEcsGlobalSearchAction);
+            document.getElementById('ecsGlobalSearchModal').addEventListener('click', function(event) {
+                if (event.target.id === 'ecsGlobalSearchModal') hideEcsGlobalSearchModal();
+            });
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && document.getElementById('ecsGlobalSearchModal').classList.contains('active')) {
+                    hideEcsGlobalSearchModal();
+                }
+            });
 
             // ECS Quick Entry toggle
             document.getElementById('ecsQuickEntryToggle').addEventListener('click', function() {
@@ -5792,6 +5990,8 @@ if (presets.length) {
 
                 const rowDiv = document.createElement('div');
                 rowDiv.className = 'grid-row';
+                rowDiv.dataset.ecsCode = code;
+                rowDiv.dataset.roomName = currentRoomName;
 
                 // Code cell
                 const codeCell = document.createElement('div');
@@ -6333,6 +6533,8 @@ barcodeWrapper.appendChild(barcodeInput);
                 
                 const rowDiv = document.createElement('div');
                 rowDiv.className = 'grid-row';
+                rowDiv.dataset.ecsCode = code;
+                rowDiv.dataset.roomName = currentRoomName;
 
                 // Code cell
                 const codeCell = document.createElement('div');
@@ -6582,6 +6784,8 @@ barcodeWrapper.appendChild(barcodeInput);
             const row = document.createElement('div');
             row.className = 'ecs-quick-entry-row confirmed';
             row.dataset.code = code;
+            row.dataset.ecsCode = code;
+            row.dataset.roomName = roomName;
             // Allow the controls below to stack on narrow screens
             row.style.flexDirection = 'column';
             row.style.alignItems = 'stretch';
@@ -7378,6 +7582,357 @@ barcodeWrapper.appendChild(barcodeInput);
                     }
                 });
             });
+        }
+
+        let ecsGlobalSearchMatches = [];
+
+        function getCurrentEcsRoomName() {
+            const roomNames = Object.keys(appState.roomCodes || {});
+            return roomNames[appState.currentCodeRoomIndex] || '';
+        }
+
+        function normalizeEcsSearchValue(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function compactEcsSearchValue(value) {
+            return normalizeEcsSearchValue(value).replace(/[\s_-]+/g, '');
+        }
+
+        function hasOwnKey(obj, key) {
+            return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+        }
+
+        function getEcsGlobalSearchMatches(query) {
+            const q = normalizeEcsSearchValue(query);
+            const compactQ = compactEcsSearchValue(query);
+            if (!q && !compactQ) return [];
+
+            const matches = [];
+            const roomNames = Object.keys(appState.roomCodes || {});
+
+            roomNames.forEach((roomName, roomIndex) => {
+                const codes = appState.roomCodes[roomName] || [];
+                codes.forEach((code, codeIndex) => {
+                    const codeText = String(code || '');
+                    const codeLower = normalizeEcsSearchValue(codeText);
+                    const codeCompact = compactEcsSearchValue(codeText);
+                    const roomLower = normalizeEcsSearchValue(roomName);
+
+                    let score = null;
+                    if (codeLower === q || codeCompact === compactQ) score = 0;
+                    else if (codeLower.startsWith(q) || (compactQ && codeCompact.startsWith(compactQ))) score = 1;
+                    else if (codeLower.includes(q) || (compactQ && codeCompact.includes(compactQ))) score = 2;
+                    else if (roomLower.includes(q)) score = 3;
+
+                    if (score !== null) {
+                        matches.push({ roomName, roomIndex, code: codeText, codeIndex, score });
+                    }
+                });
+            });
+
+            return matches.sort((a, b) => {
+                if (a.score !== b.score) return a.score - b.score;
+                if (a.roomIndex !== b.roomIndex) return a.roomIndex - b.roomIndex;
+                return a.codeIndex - b.codeIndex;
+            });
+        }
+
+        function showEcsGlobalSearchModal() {
+            const modal = document.getElementById('ecsGlobalSearchModal');
+            const input = document.getElementById('ecsGlobalSearchInput');
+            if (!modal || !input) return;
+
+            modal.classList.add('active');
+            renderEcsGlobalSearchResults();
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 60);
+        }
+
+        function hideEcsGlobalSearchModal() {
+            const modal = document.getElementById('ecsGlobalSearchModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        function renderEcsGlobalSearchResults() {
+            const input = document.getElementById('ecsGlobalSearchInput');
+            const currentRoomEl = document.getElementById('ecsGlobalSearchCurrentRoom');
+            const resultsEl = document.getElementById('ecsGlobalSearchResults');
+            if (!input || !currentRoomEl || !resultsEl) return;
+
+            const currentRoom = getCurrentEcsRoomName();
+            currentRoomEl.textContent = currentRoom ? `Current room: ${currentRoom}` : 'No ECS room selected';
+
+            const query = input.value.trim();
+            resultsEl.innerHTML = '';
+            ecsGlobalSearchMatches = [];
+
+            if (!query) {
+                const empty = document.createElement('div');
+                empty.className = 'ecs-global-search-empty';
+                empty.textContent = 'Start typing an ECS code.';
+                resultsEl.appendChild(empty);
+                return;
+            }
+
+            const matches = getEcsGlobalSearchMatches(query);
+            if (!matches.length) {
+                const empty = document.createElement('div');
+                empty.className = 'ecs-global-search-empty';
+                empty.textContent = 'No matching ECS codes found.';
+                resultsEl.appendChild(empty);
+                return;
+            }
+
+            ecsGlobalSearchMatches = matches.slice(0, 50);
+            const targetCodes = (appState.roomCodes[currentRoom] || []).map(code => normalizeEcsSearchValue(code));
+
+            ecsGlobalSearchMatches.forEach((match, index) => {
+                const isCurrentRoom = match.roomName === currentRoom;
+                const targetAlreadyHasCode = !isCurrentRoom && targetCodes.includes(normalizeEcsSearchValue(match.code));
+
+                const card = document.createElement('div');
+                card.className = 'ecs-global-result';
+
+                const main = document.createElement('div');
+                main.className = 'ecs-global-result-main';
+
+                const textWrap = document.createElement('div');
+                const codeEl = document.createElement('div');
+                codeEl.className = 'ecs-global-result-code';
+                codeEl.textContent = match.code;
+                const roomEl = document.createElement('div');
+                roomEl.className = 'ecs-global-result-room';
+                roomEl.textContent = match.roomName;
+                textWrap.appendChild(codeEl);
+                textWrap.appendChild(roomEl);
+
+                const badge = document.createElement('div');
+                badge.className = 'ecs-global-result-badge';
+                badge.textContent = isCurrentRoom ? 'Here' : `Room ${match.roomIndex + 1}`;
+
+                main.appendChild(textWrap);
+                main.appendChild(badge);
+
+                const actions = document.createElement('div');
+                actions.className = 'ecs-global-result-actions';
+
+                const goBtn = document.createElement('button');
+                goBtn.type = 'button';
+                goBtn.className = 'ecs-global-result-action';
+                goBtn.textContent = isCurrentRoom ? 'Show code' : 'Go to room';
+                goBtn.dataset.action = 'go';
+                goBtn.dataset.matchIndex = index;
+
+                const moveBtn = document.createElement('button');
+                moveBtn.type = 'button';
+                moveBtn.className = 'ecs-global-result-action primary';
+                moveBtn.textContent = isCurrentRoom ? 'In current room' : (targetAlreadyHasCode ? 'Already here' : 'Move here');
+                moveBtn.dataset.action = 'move';
+                moveBtn.dataset.matchIndex = index;
+                moveBtn.disabled = isCurrentRoom || targetAlreadyHasCode;
+
+                actions.appendChild(goBtn);
+                actions.appendChild(moveBtn);
+
+                card.appendChild(main);
+                card.appendChild(actions);
+                resultsEl.appendChild(card);
+            });
+
+            if (matches.length > ecsGlobalSearchMatches.length) {
+                const more = document.createElement('div');
+                more.className = 'ecs-global-search-empty';
+                more.textContent = `${matches.length - ecsGlobalSearchMatches.length} more result(s). Keep typing to narrow it down.`;
+                resultsEl.appendChild(more);
+            }
+        }
+
+        async function handleEcsGlobalSearchAction(event) {
+            const button = event.target.closest('.ecs-global-result-action');
+            if (!button) return;
+
+            const match = ecsGlobalSearchMatches[parseInt(button.dataset.matchIndex, 10)];
+            if (!match) return;
+
+            if (button.dataset.action === 'go') {
+                hideEcsGlobalSearchModal();
+                jumpToEcsCode(match.roomName, match.code);
+                return;
+            }
+
+            if (button.dataset.action === 'move') {
+                button.disabled = true;
+                await moveEcsCodeToCurrentRoom(match);
+            }
+        }
+
+        function ensureEcsQuickEntryCodeVisible(roomName, code) {
+            if (!appState.ecsQuickEntryState) appState.ecsQuickEntryState = {};
+            if (!appState.ecsQuickEntryState[roomName]) {
+                appState.ecsQuickEntryState[roomName] = { confirmedCodes: [] };
+            }
+            const state = appState.ecsQuickEntryState[roomName];
+            if (!Array.isArray(state.confirmedCodes)) state.confirmedCodes = [];
+            if (!state.confirmedCodes.includes(code)) state.confirmedCodes.push(code);
+        }
+
+        function highlightEcsCodeRow(code) {
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    const rows = [...document.querySelectorAll('#codeChecksContainer .grid-row, #codeChecksContainer .ecs-quick-entry-row.confirmed')];
+                    const row = rows.find(el => {
+                        if (el.dataset.ecsCode === code || el.dataset.code === code) return true;
+                        const codeCell = el.querySelector('.grid-cell.code-cell, .ecs-confirmed-code');
+                        return codeCell && codeCell.textContent.trim() === code;
+                    });
+                    if (!row) return;
+                    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    row.classList.add('ecs-code-search-hit');
+                    setTimeout(() => row.classList.remove('ecs-code-search-hit'), 1900);
+                }, 80);
+            });
+        }
+
+        function jumpToEcsCode(roomName, code) {
+            const roomNames = Object.keys(appState.roomCodes || {});
+            const roomIndex = roomNames.indexOf(roomName);
+            if (roomIndex === -1) return;
+
+            appState.currentCodeRoomIndex = roomIndex;
+            if (appState.ecsQuickEntryMode) ensureEcsQuickEntryCodeVisible(roomName, code);
+            showCodeCheckPage();
+            updateCodeCheckPage();
+            generateCodeCheckItems();
+            updateCodeCheckStates();
+            saveDataToStorage();
+            highlightEcsCodeRow(code);
+        }
+
+        function moveEcsDataKey(oldCodeId, newCodeId) {
+            appState.checkData = appState.checkData || {};
+            appState.codeSpecificComments = appState.codeSpecificComments || {};
+            appState.ecsExtraData = appState.ecsExtraData || {};
+
+            if (hasOwnKey(appState.checkData, oldCodeId)) {
+                appState.checkData[newCodeId] = appState.checkData[oldCodeId];
+                delete appState.checkData[oldCodeId];
+            } else if (!hasOwnKey(appState.checkData, newCodeId)) {
+                appState.checkData[newCodeId] = null;
+            }
+
+            if (hasOwnKey(appState.codeSpecificComments, oldCodeId)) {
+                appState.codeSpecificComments[newCodeId] = appState.codeSpecificComments[oldCodeId];
+                delete appState.codeSpecificComments[oldCodeId];
+            } else if (!hasOwnKey(appState.codeSpecificComments, newCodeId)) {
+                appState.codeSpecificComments[newCodeId] = '';
+            }
+
+            Object.keys(appState.ecsExtraData).forEach(listId => {
+                const listData = appState.ecsExtraData[listId];
+                if (!listData || typeof listData !== 'object') return;
+                if (hasOwnKey(listData, oldCodeId)) {
+                    listData[newCodeId] = listData[oldCodeId];
+                    delete listData[oldCodeId];
+                }
+            });
+        }
+
+        function moveEcsQuickEntryState(sourceRoom, targetRoom, code) {
+            if (!appState.ecsQuickEntryState) return;
+            let wasConfirmed = false;
+
+            const sourceState = appState.ecsQuickEntryState[sourceRoom];
+            if (sourceState && Array.isArray(sourceState.confirmedCodes)) {
+                const before = sourceState.confirmedCodes.length;
+                sourceState.confirmedCodes = sourceState.confirmedCodes.filter(item => item !== code);
+                wasConfirmed = sourceState.confirmedCodes.length !== before;
+            }
+
+            if (wasConfirmed || appState.ecsQuickEntryMode) {
+                ensureEcsQuickEntryCodeVisible(targetRoom, code);
+            }
+        }
+
+        function syncCodeListTextareaFromState() {
+            if (!codeListTextarea) return;
+            const lines = [];
+            Object.keys(appState.roomCodes || {}).forEach(roomName => {
+                const codes = appState.roomCodes[roomName] || [];
+                if (codes.length > 0) lines.push(`${roomName}- ${codes.join(' ')}`);
+            });
+            codeListTextarea.value = lines.join('\n');
+        }
+
+        async function reassignPhotosForCodeId(oldCodeId, newCodeId, newRoomName, ecsCode) {
+            if (oldCodeId === newCodeId) return;
+            try {
+                const photos = await getPhotosByCodeId(oldCodeId);
+                if (!photos.length) return;
+
+                const db = await openPhotoDB();
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    photos.forEach(photo => {
+                        photo.codeId = newCodeId;
+                        photo.roomName = newRoomName;
+                        photo.ecsCode = ecsCode;
+                        photo.label = `${newRoomName} / ${ecsCode}\n${formatDateTime(photo.timestamp)}`;
+                        store.put(photo);
+                    });
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = e => reject(e.target.error);
+                });
+            } catch (error) {
+                console.warn('Photo reassignment failed:', error);
+            }
+        }
+
+        async function moveEcsCodeToCurrentRoom(match) {
+            const targetRoom = getCurrentEcsRoomName();
+            const sourceRoom = match.roomName;
+            const code = match.code;
+            if (!targetRoom || !sourceRoom || !code) return;
+
+            if (sourceRoom === targetRoom) {
+                hideEcsGlobalSearchModal();
+                jumpToEcsCode(targetRoom, code);
+                return;
+            }
+
+            const sourceCodes = appState.roomCodes[sourceRoom] || [];
+            const sourceIndex = sourceCodes.findIndex(item => item === code);
+            if (sourceIndex === -1) {
+                renderEcsGlobalSearchResults();
+                return;
+            }
+
+            if (!appState.roomCodes[targetRoom]) appState.roomCodes[targetRoom] = [];
+            const targetCodes = appState.roomCodes[targetRoom];
+            const targetHasCode = targetCodes.some(item => normalizeEcsSearchValue(item) === normalizeEcsSearchValue(code));
+            if (targetHasCode) {
+                hideEcsGlobalSearchModal();
+                showMessageModal('Already in Room', `${code} already exists in ${targetRoom}.`);
+                return;
+            }
+
+            const movedCode = sourceCodes.splice(sourceIndex, 1)[0];
+            targetCodes.push(movedCode);
+
+            const oldCodeId = `${sourceRoom}-${movedCode}`;
+            const newCodeId = `${targetRoom}-${movedCode}`;
+            moveEcsDataKey(oldCodeId, newCodeId);
+            moveEcsQuickEntryState(sourceRoom, targetRoom, movedCode);
+            syncCodeListTextareaFromState();
+
+            await reassignPhotosForCodeId(oldCodeId, newCodeId, targetRoom, movedCode);
+
+            saveDataToStorage();
+            hideEcsGlobalSearchModal();
+            jumpToEcsCode(targetRoom, movedCode);
         }
 
 
