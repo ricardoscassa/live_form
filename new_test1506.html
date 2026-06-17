@@ -7603,6 +7603,12 @@ barcodeWrapper.appendChild(barcodeInput);
             return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
         }
 
+        function ecsCodeHasStatus(roomName, code) {
+            const codeId = `${roomName}-${code}`;
+            const status = appState.checkData ? appState.checkData[codeId] : null;
+            return status !== null && status !== undefined;
+        }
+
         function getEcsGlobalSearchMatches(query) {
             const q = normalizeEcsSearchValue(query);
             const compactQ = compactEcsSearchValue(query);
@@ -7614,6 +7620,8 @@ barcodeWrapper.appendChild(barcodeInput);
             roomNames.forEach((roomName, roomIndex) => {
                 const codes = appState.roomCodes[roomName] || [];
                 codes.forEach((code, codeIndex) => {
+                    if (ecsCodeHasStatus(roomName, code)) return;
+
                     const codeText = String(code || '');
                     const codeLower = normalizeEcsSearchValue(codeText);
                     const codeCompact = compactEcsSearchValue(codeText);
@@ -7663,7 +7671,9 @@ barcodeWrapper.appendChild(barcodeInput);
             if (!input || !currentRoomEl || !resultsEl) return;
 
             const currentRoom = getCurrentEcsRoomName();
-            currentRoomEl.textContent = currentRoom ? `Current room: ${currentRoom}` : 'No ECS room selected';
+            currentRoomEl.textContent = currentRoom
+                ? `Current room: ${currentRoom} · showing codes with no status`
+                : 'No ECS room selected';
 
             const query = input.value.trim();
             resultsEl.innerHTML = '';
@@ -7681,7 +7691,7 @@ barcodeWrapper.appendChild(barcodeInput);
             if (!matches.length) {
                 const empty = document.createElement('div');
                 empty.className = 'ecs-global-search-empty';
-                empty.textContent = 'No matching ECS codes found.';
+                empty.textContent = 'No matching ECS codes without a status found.';
                 resultsEl.appendChild(empty);
                 return;
             }
