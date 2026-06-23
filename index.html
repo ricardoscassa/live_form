@@ -129,45 +129,96 @@
         }
         
         /* Main Menu Styles */
+        .main-menu-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px;
+        }
+
+        .main-menu-heading {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .main-menu-kicker {
+            display: none;
+        }
+
+        .main-menu-title {
+            color: #2f3137;
+            font-size: 2rem;
+            line-height: 1.15;
+            letter-spacing: 0;
+            margin-bottom: 0;
+        }
+
+        .main-menu-subtitle {
+            display: none;
+        }
+
         .menu-buttons {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 18px;
             align-items: center;
         }
-        
+
         .menu-button {
             width: 100%;
-            max-width: 400px;
-            padding: 20px;
-            font-size: 1.2rem;
-            font-weight: 600;
-            text-align: center;
-            border: none;
-            border-radius: 15px;
+            max-width: 560px;
+            min-height: 94px;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: #fff;
+            border: 0;
+            border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            /* iOS touch optimization */
+            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+            text-align: center;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
+            box-shadow: 0 8px 18px rgba(16, 24, 40, 0.12);
         }
-        
-        .menu-button.primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .menu-button.secondary {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-        }
-        
+
         .menu-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+            filter: saturate(1.06);
+            box-shadow: 0 12px 24px rgba(16, 24, 40, 0.16);
         }
+
+        .menu-button:active {
+            transform: scale(0.99);
+        }
+
+        .menu-title {
+            display: block;
+            font-size: 1.28rem;
+            line-height: 1.2;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .menu-subtitle {
+            display: block;
+            font-size: 0.95rem;
+            line-height: 1.25;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            opacity: 0.82;
+        }
+
+        .menu-ea { background: linear-gradient(135deg, #5f78ee 0%, #7447ae 100%); }
+        .menu-ecs { background: linear-gradient(135deg, #22a956 0%, #22c7a6 100%); }
+        .menu-sestsv { background: linear-gradient(135deg, #ff6863 0%, #f05a28 100%); }
+        .menu-assets { background: linear-gradient(135deg, #16a5b5 0%, #0c8090 100%); }
+        .menu-assets2 { background: linear-gradient(135deg, #7942c6 0%, #5e159b 100%); }
+        .menu-upload { background: linear-gradient(135deg, #f39325 0%, #e87817 100%); }
         
         /* Room Input Page Styles */
         .room-input-section {
@@ -211,18 +262,19 @@
         }
         
         .button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #5f78ee 0%, #7447ae 100%);
             color: white;
             border: none;
             padding: 15px 30px;
             border-radius: 10px;
             font-size: 1.1rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             min-height: 50px;
+            box-shadow: 0 6px 14px rgba(16, 24, 40, 0.12);
             /* iOS touch optimization */
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
@@ -230,7 +282,8 @@
         
         .button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            filter: saturate(1.06);
+            box-shadow: 0 10px 20px rgba(16, 24, 40, 0.18);
         }
         
         .button:active {
@@ -238,25 +291,24 @@
         }
         
         .button.secondary {
-            background: #6c757d;
+            background: #737f89;
         }
         
         .button.danger {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            background: linear-gradient(135deg, #ef3d48 0%, #cc1733 100%);
         }
         
         .button.success {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(135deg, #22a956 0%, #22c7a6 100%);
         }
 
         .button.warning {
-            background: linear-gradient(135deg, #f0932b 0%, #e67e22 100%);
+            background: linear-gradient(135deg, #f39325 0%, #e87817 100%);
         }
 
         .button.warning:hover {
-            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(240, 147, 43, 0.4);
+            box-shadow: 0 10px 20px rgba(16, 24, 40, 0.18);
         }
         
         .button:disabled {
@@ -1238,40 +1290,42 @@
 
         .status-btn {
             flex: 1;
-            padding: 10px 15px;
+            min-height: 50px;
+            padding: 12px 15px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 0.9rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            box-shadow: 0 6px 14px rgba(16, 24, 40, 0.12);
             /* iOS touch optimization */
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
 
         .status-btn.no-access {
-            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            background: linear-gradient(135deg, #ef3d48 0%, #cc1733 100%);
             color: white;
         }
 
         .status-btn.no-access:hover {
-            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+            filter: saturate(1.06);
+            box-shadow: 0 10px 20px rgba(16, 24, 40, 0.18);
         }
 
         .status-btn.completed {
-            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            background: linear-gradient(135deg, #22a956 0%, #22c7a6 100%);
             color: white;
         }
 
         .status-btn.completed:hover {
-            background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+            filter: saturate(1.06);
+            box-shadow: 0 10px 20px rgba(16, 24, 40, 0.18);
         }
 
         .navigation {
@@ -1471,6 +1525,170 @@
             flex: 1;
             padding: 12px;
             font-size: 1rem;
+        }
+
+        #ecsGlobalSearchModal {
+            z-index: 11000;
+        }
+
+        .ecs-global-search-modal {
+            max-width: 620px;
+            text-align: left;
+            padding: 22px;
+        }
+
+        .ecs-global-search-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .ecs-global-search-header h3 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 1.25rem;
+            letter-spacing: 0;
+        }
+
+        .ecs-global-search-close {
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-radius: 50%;
+            background: #f2f4f7;
+            color: #344054;
+            cursor: pointer;
+            font-size: 1.35rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ecs-global-search-input {
+            width: 100%;
+            min-height: 52px;
+            padding: 13px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            color: #1f2937;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .ecs-global-search-input:focus {
+            border-color: #FF6B00;
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+        }
+
+        .ecs-global-search-current {
+            margin: 10px 0 12px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #667085;
+        }
+
+        .ecs-global-search-results {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: min(54vh, 430px);
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .ecs-global-search-empty {
+            padding: 22px 12px;
+            text-align: center;
+            color: #667085;
+            font-weight: 600;
+        }
+
+        .ecs-global-result {
+            border: 1px solid #e4e7ec;
+            border-radius: 12px;
+            background: #fff;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(16, 24, 40, 0.06);
+        }
+
+        .ecs-global-result-main {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .ecs-global-result-code {
+            color: #111827;
+            font-size: 1rem;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .ecs-global-result-room {
+            margin-top: 3px;
+            color: #667085;
+            font-size: 0.84rem;
+            font-weight: 650;
+            overflow-wrap: anywhere;
+        }
+
+        .ecs-global-result-badge {
+            flex-shrink: 0;
+            border-radius: 999px;
+            background: #fff1e8;
+            color: #FF6B00;
+            padding: 5px 9px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .ecs-global-result-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .ecs-global-result-action {
+            min-height: 42px;
+            border: 1px solid #d0d5dd;
+            border-radius: 10px;
+            background: #fff;
+            color: #344054;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.88rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ecs-global-result-action.primary {
+            border-color: transparent;
+            background: linear-gradient(135deg, #FF6B00 0%, #ff8a38 100%);
+            color: #fff;
+        }
+
+        .ecs-global-result-action:disabled {
+            opacity: 0.48;
+            cursor: default;
+        }
+
+        .ecs-code-search-hit {
+            animation: ecsCodeSearchPulse 1.8s ease;
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.28), 0 10px 24px rgba(255, 107, 0, 0.16) !important;
+        }
+
+        @keyframes ecsCodeSearchPulse {
+            0% { background: #fff7ed; }
+            100% { background: #fff; }
         }
         
         /* Responsive Design - Enhanced for iOS */
@@ -2237,12 +2455,6 @@
     font-size: 0.95rem;
 }
 
-/* Download all photos button in action-buttons area */
-#downloadAllPhotosBtn {
-    background: linear-gradient(135deg, #1C1C1E 0%, #3A3A3C 100%);
-    color: white;
-}
-
 /* Camera label — icon only (no text), used in Quick Entry confirmed rows */
 .camera-label.icon-only {
     width: 50px;
@@ -2600,6 +2812,122 @@
       }
       .lock-btn:active { transform: scale(0.9); }
     </style>
+
+    <!-- Bottom nav copy feature styles -->
+    <style>
+        .bottom-nav-page { padding-bottom: calc(106px + env(safe-area-inset-bottom, 0px)); }
+        .bottom-nav-actions {
+            position: fixed;
+            left: 50%;
+            bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            width: min(520px, calc(100vw - 24px));
+            transform: translateX(-50%) scale(1);
+            transform-origin: center bottom;
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid rgba(214, 219, 226, 0.95);
+            border-radius: 999px;
+            padding: 6px;
+            box-shadow: 0 12px 28px rgba(16, 24, 40, 0.18), 0 2px 8px rgba(16, 24, 40, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: transform .28s cubic-bezier(.34,1.25,.64,1), opacity .22s ease;
+            z-index: 9999;
+        }
+        .bottom-nav-actions.nav-shrunk { transform: translateX(-50%) scale(.88); opacity: .88; }
+        .bottom-nav-btn {
+            min-width: 0;
+            min-height: 54px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            background: transparent;
+            border: 0;
+            cursor: pointer;
+            border-radius: 999px;
+            padding: 6px 4px;
+            color: #667085;
+            transition: background .15s ease, color .15s ease, transform .15s ease;
+            -webkit-tap-highlight-color: transparent;
+            font: inherit;
+            touch-action: manipulation;
+        }
+        .bottom-nav-btn:active { transform: scale(.92); background: #f2f4f7; }
+        .bottom-nav-btn:disabled { opacity: .42; cursor: default; }
+        .bottom-nav-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+        .bottom-nav-btn span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 9px; font-weight: 700; letter-spacing: 0; white-space: nowrap; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
+        .bottom-nav-btn.nav-active { color: #FF6B00; background: #fff1e8; }
+        .bottom-nav-btn.nav-complete { color: #1b8f45; background: #eaf8ef; }
+        .bottom-nav-desktop-btn { display: none; }
+        .bottom-nav-divider { display: none; }
+        .bottom-nav-more-sheet {
+            position: fixed;
+            left: 50%;
+            right: auto;
+            bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+            width: min(360px, calc(100vw - 28px));
+            z-index: 10000;
+            background: rgba(255,255,255,.98);
+            border: 1px solid #e1e5e9;
+            border-radius: 14px;
+            padding: 8px;
+            transform: translate(-50%, 12px) scale(.96);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform .22s cubic-bezier(.34,1.2,.64,1), opacity .18s ease;
+            box-shadow: 0 14px 34px rgba(16, 24, 40, 0.20);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .bottom-nav-more-sheet.sheet-open { transform: translate(-50%, 0) scale(1); opacity: 1; pointer-events: all; }
+        .bottom-nav-sheet-handle { width: 34px; height: 4px; background: #d0d5dd; border-radius: 2px; margin: 2px auto 8px; }
+        .bottom-nav-sheet-btn { display: flex; align-items: center; gap: 12px; width: 100%; background: #f8fafc; border: 1px solid #edf0f3; border-radius: 10px; padding: 12px 12px; color: #1f2937; font-size: 14px; font-weight: 650; cursor: pointer; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; text-align: left; -webkit-tap-highlight-color: transparent; transition: background .15s ease, border-color .15s ease; }
+        .bottom-nav-sheet-btn + .bottom-nav-sheet-btn { margin-top: 8px; }
+        .bottom-nav-sheet-btn:active { background: #eef2f6; border-color: #d0d5dd; }
+        .bottom-nav-sheet-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; color: #FF6B00; flex-shrink: 0; }
+        .bottom-nav-sheet-btn.sheet-btn-danger { color: #d92d20; }
+        .bottom-nav-sheet-btn.sheet-btn-danger svg { color: #d92d20; }
+        .bottom-nav-scrim { position: fixed; inset: 0; background: rgba(0,0,0,0); z-index: 9998; pointer-events: none; transition: background .2s ease; }
+        .bottom-nav-scrim.scrim-visible { background: rgba(16,24,40,.18); pointer-events: all; }
+        @media (min-width: 900px) {
+            .bottom-nav-actions {
+                width: auto;
+                max-width: calc(100vw - 40px);
+                display: flex;
+                grid-template-columns: none;
+                gap: 6px;
+                padding: 7px;
+            }
+            .bottom-nav-btn {
+                min-width: 72px;
+                padding: 6px 12px;
+            }
+            .bottom-nav-desktop-btn { display: flex; }
+            .bottom-nav-more-btn { display: none; }
+            .bottom-nav-btn.bottom-nav-danger {
+                color: #d92d20;
+                background: #fff4f3;
+            }
+            .bottom-nav-more-sheet,
+            .bottom-nav-scrim { display: none !important; }
+        }
+        @media (max-width: 360px) {
+            .bottom-nav-actions { width: calc(100vw - 12px); padding: 5px; }
+            .bottom-nav-btn { min-height: 50px; }
+            .bottom-nav-btn span { font-size: 8px; }
+        }
+        @media (max-width: 320px) {
+            .bottom-nav-btn span { display: none; }
+            .bottom-nav-btn { min-height: 44px; }
+            .bottom-nav-page { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+        }
+    </style>
+
 </head>
 <body>
 
@@ -2623,46 +2951,38 @@
         <!-- PAGE 01 — MAIN MENU (entry / inspection-type chooser)                          -->
         <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  -->
         <div id="mainMenuPage" class="page active">
-            <div class="card">
-                <h2 style="text-align: center; margin-bottom: 30px; color: #333;">Choose Inspection Type</h2>
+            <div class="card main-menu-card">
+                <div class="main-menu-heading">
+                    <div class="main-menu-kicker">Inspection launcher</div>
+                    <h2 class="main-menu-title">Choose inspection type</h2>
+                    <p class="main-menu-subtitle">Start the workflow that matches the rooms, ECS codes, barcodes, or saved data you have today.</p>
+                </div>
                 <div class="menu-buttons">
-                    <button id="siteInspectionBtn" class="menu-button primary">
-                        EA - Inspection
-                        <div style="font-size: 0.9rem; font-weight: normal; margin-top: 5px; opacity: 0.8;">
-                            ROOM-BY-ROOM INSPECTION
-                        </div>
+                    <button id="siteInspectionBtn" class="menu-button menu-ea">
+                        <span class="menu-title">EA - Inspection</span>
+                        <span class="menu-subtitle">Room-by-room inspection</span>
                     </button>
-                    <button id="codeInspectionBtn" class="menu-button secondary">
-                        ECS INSPECTION
-                        <div style="font-size: 0.9rem; font-weight: normal; margin-top: 5px; opacity: 0.8;">
-                            Room codes with detailed checks
-                        </div>
+                    <button id="codeInspectionBtn" class="menu-button menu-ecs">
+                        <span class="menu-title">ECS Inspection</span>
+                        <span class="menu-subtitle">Room codes with detailed checks</span>
                     </button>
-                    <button id="roomSeStSvInspectionBtn" class="menu-button" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: white;">
-                        Room Inspection SE/ST/SV
-                        <div style="font-size: 0.9rem; font-weight: normal; margin-top: 5px; opacity: 0.8;">
-                            Room number with SE/ST/SV entries
-                        </div>
+                    <button id="roomSeStSvInspectionBtn" class="menu-button menu-sestsv">
+                        <span class="menu-title">Room Inspection SE/ST/SV</span>
+                        <span class="menu-subtitle">Room number with SE/ST/SV entries</span>
                     </button>
-                    <button id="flexibleTrackingBtn" class="menu-button" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white;">
-                        Asset Tagz
-                        <div style="font-size: 0.9rem; font-weight: normal; margin-top: 5px; opacity: 0.8;">
-                            Rooms & Barcodes (link later via ECS)
-                        </div>
+                    <button id="flexibleTrackingBtn" class="menu-button menu-assets">
+                        <span class="menu-title">Asset Tagz</span>
+                        <span class="menu-subtitle">Rooms & barcodes</span>
                     </button>
     
                     
-                    <button id="assetTagz2Btn" class="menu-button" style="background: linear-gradient(135deg, #6f42c1 0%, #5a189a 100%); color: white;">
-                        Asset Tagz 2.0
-                        <div style="font-size: 0.9rem; font-weight: normal; margin-top: 5px; opacity: 0.8;">
-                            ECS inspection + Barcode dropdown
-                        </div>
+                    <button id="assetTagz2Btn" class="menu-button menu-assets2">
+                        <span class="menu-title">Asset Tagz 2.0</span>
+                        <span class="menu-subtitle">ECS inspection + barcode dropdown</span>
                     </button>
-<button id="uploadJsonMainMenu" class="menu-button" style="background: linear-gradient(135deg, #f0932b 0%, #e67e22 100%); color: white;">
-                        Upload Inspection Data
-                        <div style="font-size: 0.9rem; font-weight: normal; margin-top: 5px; opacity: 0.8;">
-                            Load a previous .json file
-                        </div>
+                    <button id="uploadJsonMainMenu" class="menu-button menu-upload">
+                        <span class="menu-title">Upload Inspection Data</span>
+                        <span class="menu-subtitle">Load a previous JSON file</span>
                     </button>
                 </div>
             </div>
@@ -2885,15 +3205,25 @@ Room Codes (Room- Codes)
                 </div>
                 <div id="checksContainer" class="checks-grid">
                 </div>
-                <div class="navigation">
-                    <button id="prevRoom" class="button nav-button secondary">Previous Room</button>
-                    <button id="nextRoom" class="button nav-button">Next Room</button>
-                </div>
-                <div class="action-buttons">
-                    <button id="exportExcel" class="button success">Export to CSV</button>
-                    <button id="downloadJsonCheckPage" class="button warning">Download Data (JSON)</button>
-                    <button id="shareCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
-                    <button id="backToInput" class="button secondary">Back to Input</button>
+                <div class="navigation bottom-nav-page">
+                    <nav class="bottom-nav-actions" aria-label="Room actions">
+                        <button id="prevRoom" class="bottom-nav-btn" aria-label="Previous Room"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span>Prev</span></button>
+                        <button id="nextRoom" class="bottom-nav-btn nav-active" aria-label="Next Room"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg><span>Next</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button id="exportExcel" class="bottom-nav-btn" aria-label="Export to CSV"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg><span>CSV</span></button>
+                        <button id="shareCheckPage" class="bottom-nav-btn" aria-label="QR Code"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 17h1v1h-1z"/></svg><span>QR</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button type="button" class="bottom-nav-btn bottom-nav-photo-btn" aria-label="Download Photos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5L5 20"/></svg><span>Photos</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="downloadJsonCheckPage" aria-label="Download JSON"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>JSON</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn bottom-nav-danger" data-click-target="backToInput" aria-label="Back to Input"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg><span>Back</span></button>
+                        <button class="bottom-nav-btn bottom-nav-more-btn" type="button" aria-label="More options" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg><span>More</span></button>
+                    </nav>
+                    <div class="bottom-nav-scrim" aria-hidden="true"></div>
+                    <div class="bottom-nav-more-sheet" role="dialog" aria-label="More options" aria-modal="true">
+                        <div class="bottom-nav-sheet-handle"></div>
+                        <button id="downloadJsonCheckPage" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Data (JSON)</button>
+                        <button id="backToInput" class="bottom-nav-sheet-btn sheet-btn-danger"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Back to Input</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2932,16 +3262,27 @@ Room Codes (Room- Codes)
                     <div class="grid-header">Comment</div>
                     <!-- Code rows will be inserted here by JavaScript -->
                 </div>
-                <div class="navigation">
-                    <button id="prevCodeRoom" class="button nav-button secondary">Previous Room</button>
-                    <button id="nextCodeRoom" class="button nav-button">Next Room</button>
-                </div>
-                <div class="action-buttons">
-                    <button id="exportCodeExcel" class="button success">Export to CSV</button>
-                     <button id="downloadJsonCodeCheckPage" class="button warning">Download Data (JSON)</button>
-                     <button id="shareCodeCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
-                    <button id="downloadAllPhotosBtn" class="button">Download All Photos</button>
-                    <button id="backToCodeInput" class="button secondary">Back to Input</button>
+                <div class="navigation bottom-nav-page">
+                    <nav class="bottom-nav-actions" aria-label="Room actions">
+                        <button id="prevCodeRoom" class="bottom-nav-btn" aria-label="Previous Room"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span>Prev</span></button>
+                        <button id="nextCodeRoom" class="bottom-nav-btn nav-active" aria-label="Next Room"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg><span>Next</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button id="exportCodeExcel" class="bottom-nav-btn" aria-label="Export to CSV"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg><span>CSV</span></button>
+                        <button id="shareCodeCheckPage" class="bottom-nav-btn" aria-label="QR Code"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 17h1v1h-1z"/></svg><span>QR</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button type="button" class="bottom-nav-btn bottom-nav-photo-btn" aria-label="Download Photos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5L5 20"/></svg><span>Photos</span></button>
+                        <button id="openEcsGlobalSearchDesktop" type="button" class="bottom-nav-btn bottom-nav-desktop-btn" aria-label="Find ECS Code"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg><span>Find</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="downloadJsonCodeCheckPage" aria-label="Download JSON"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>JSON</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn bottom-nav-danger" data-click-target="backToCodeInput" aria-label="Back to Input"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg><span>Back</span></button>
+                        <button class="bottom-nav-btn bottom-nav-more-btn" type="button" aria-label="More options" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg><span>More</span></button>
+                    </nav>
+                    <div class="bottom-nav-scrim" aria-hidden="true"></div>
+                    <div class="bottom-nav-more-sheet" role="dialog" aria-label="More options" aria-modal="true">
+                        <div class="bottom-nav-sheet-handle"></div>
+                        <button id="openEcsGlobalSearchMobile" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>Find ECS Code</button>
+                        <button id="downloadJsonCodeCheckPage" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Data (JSON)</button>
+                        <button id="backToCodeInput" class="bottom-nav-sheet-btn sheet-btn-danger"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Back to Input</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2988,15 +3329,25 @@ Room Codes (Room- Codes)
                     <!-- Code rows will be inserted here by JavaScript -->
                 </div>
 
-                <div class="navigation">
-                    <button id="prevAssetTagz2Room" class="button nav-button secondary">Previous Room</button>
-                    <button id="nextAssetTagz2Room" class="button nav-button">Next Room</button>
-                </div>
-                <div class="action-buttons">
-                    <button id="exportAssetTagz2Csv" class="button success">Export to CSV</button>
-                    <button id="downloadJsonAssetTagz2" class="button warning">Download Data (JSON)</button>
-                    <button id="shareAssetTagz2" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
-                    <button id="backToAssetTagz2Input" class="button secondary">Back to Input</button>
+                <div class="navigation bottom-nav-page">
+                    <nav class="bottom-nav-actions" aria-label="Room actions">
+                        <button id="prevAssetTagz2Room" class="bottom-nav-btn" aria-label="Previous Room"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span>Prev</span></button>
+                        <button id="nextAssetTagz2Room" class="bottom-nav-btn nav-active" aria-label="Next Room"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg><span>Next</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button id="exportAssetTagz2Csv" class="bottom-nav-btn" aria-label="Export to CSV"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg><span>CSV</span></button>
+                        <button id="shareAssetTagz2" class="bottom-nav-btn" aria-label="QR Code"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 17h1v1h-1z"/></svg><span>QR</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button type="button" class="bottom-nav-btn bottom-nav-photo-btn" aria-label="Download Photos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5L5 20"/></svg><span>Photos</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="downloadJsonAssetTagz2" aria-label="Download JSON"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>JSON</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn bottom-nav-danger" data-click-target="backToAssetTagz2Input" aria-label="Back to Input"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg><span>Back</span></button>
+                        <button class="bottom-nav-btn bottom-nav-more-btn" type="button" aria-label="More options" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg><span>More</span></button>
+                    </nav>
+                    <div class="bottom-nav-scrim" aria-hidden="true"></div>
+                    <div class="bottom-nav-more-sheet" role="dialog" aria-label="More options" aria-modal="true">
+                        <div class="bottom-nav-sheet-handle"></div>
+                        <button id="downloadJsonAssetTagz2" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Data (JSON)</button>
+                        <button id="backToAssetTagz2Input" class="bottom-nav-sheet-btn sheet-btn-danger"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Back to Input</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3053,15 +3404,25 @@ Room Codes (Room- Codes)
                     </div>
                 </div>
 
-                <div class="navigation">
-                    <button id="prevSeStSvRoom" class="button nav-button secondary">Previous Room</button>
-                    <button id="nextSeStSvRoom" class="button nav-button">Next Room</button>
-                </div>
-                <div class="action-buttons">
-                    <button id="exportSeStSvCsv" class="button success">Export to CSV</button>
-                    <button id="downloadJsonSeStSvCheckPage" class="button warning">Download Data (JSON)</button>
-                    <button id="shareSeStSvCheckPage" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
-                    <button id="backToSeStSvInput" class="button secondary">Back to Input</button>
+                <div class="navigation bottom-nav-page">
+                    <nav class="bottom-nav-actions" aria-label="Room actions">
+                        <button id="prevSeStSvRoom" class="bottom-nav-btn" aria-label="Previous Room"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span>Prev</span></button>
+                        <button id="nextSeStSvRoom" class="bottom-nav-btn nav-active" aria-label="Next Room"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg><span>Next</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button id="exportSeStSvCsv" class="bottom-nav-btn" aria-label="Export to CSV"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg><span>CSV</span></button>
+                        <button id="shareSeStSvCheckPage" class="bottom-nav-btn" aria-label="QR Code"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 17h1v1h-1z"/></svg><span>QR</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button type="button" class="bottom-nav-btn bottom-nav-photo-btn" aria-label="Download Photos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5L5 20"/></svg><span>Photos</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="downloadJsonSeStSvCheckPage" aria-label="Download JSON"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>JSON</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn bottom-nav-danger" data-click-target="backToSeStSvInput" aria-label="Back to Input"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg><span>Back</span></button>
+                        <button class="bottom-nav-btn bottom-nav-more-btn" type="button" aria-label="More options" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg><span>More</span></button>
+                    </nav>
+                    <div class="bottom-nav-scrim" aria-hidden="true"></div>
+                    <div class="bottom-nav-more-sheet" role="dialog" aria-label="More options" aria-modal="true">
+                        <div class="bottom-nav-sheet-handle"></div>
+                        <button id="downloadJsonSeStSvCheckPage" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Data (JSON)</button>
+                        <button id="backToSeStSvInput" class="bottom-nav-sheet-btn sheet-btn-danger"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Back to Input</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3165,17 +3526,29 @@ Room Codes (Room- Codes)
                     <!-- Rows of [Barcode] [ECS Code input] will render here -->
                 </div>
 
-                <div class="navigation">
-                    <button id="flexPrevRoom" class="button nav-button secondary">Previous Room</button>
-                    <button id="flexNextRoom" class="button nav-button">Next Room</button>
-                </div>
-                <div class="action-buttons">
-                    <button id="flexExportCsv" class="button success">Export to CSV</button>
-                    <button id="flexExportRoomStatus" class="button success">Export Room Status</button>
-                    <button id="flexDownloadJson" class="button warning">Download Data (JSON)</button>
-                    <button id="flexShareData" class="button" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:#fff;">QR Code</button>
-                    <button id="flexUploadBarcodes" class="button">Upload Barcodes JSON</button>
-                    <button id="backToFlexInput" class="button secondary">Back to Input</button>
+                <div class="navigation bottom-nav-page">
+                    <nav class="bottom-nav-actions" aria-label="Room actions">
+                        <button id="flexPrevRoom" class="bottom-nav-btn" aria-label="Previous Room"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg><span>Prev</span></button>
+                        <button id="flexNextRoom" class="bottom-nav-btn nav-active" aria-label="Next Room"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg><span>Next</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button id="flexExportCsv" class="bottom-nav-btn" aria-label="Export to CSV"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/></svg><span>CSV</span></button>
+                        <button id="flexShareData" class="bottom-nav-btn" aria-label="QR Code"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 17h1v1h-1z"/></svg><span>QR</span></button>
+                        <div class="bottom-nav-divider" role="separator"></div>
+                        <button type="button" class="bottom-nav-btn bottom-nav-photo-btn" aria-label="Download Photos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5L5 20"/></svg><span>Photos</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="flexDownloadJson" aria-label="Download JSON"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>JSON</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="flexExportRoomStatus" aria-label="Export Room Status"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/><path d="M14 14h4"/><path d="M14 18h4"/></svg><span>Status</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="flexUploadBarcodes" aria-label="Upload Barcodes JSON"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Upload</span></button>
+                        <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn bottom-nav-danger" data-click-target="backToFlexInput" aria-label="Back to Input"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg><span>Back</span></button>
+                        <button class="bottom-nav-btn bottom-nav-more-btn" type="button" aria-label="More options" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg><span>More</span></button>
+                    </nav>
+                    <div class="bottom-nav-scrim" aria-hidden="true"></div>
+                    <div class="bottom-nav-more-sheet" role="dialog" aria-label="More options" aria-modal="true">
+                        <div class="bottom-nav-sheet-handle"></div>
+                        <button id="flexDownloadJson" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Data (JSON)</button>
+                        <button id="flexExportRoomStatus" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/><path d="M14 14h4"/><path d="M14 18h4"/></svg>Export Room Status</button>
+                        <button id="flexUploadBarcodes" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Barcodes JSON</button>
+                        <button id="backToFlexInput" class="bottom-nav-sheet-btn sheet-btn-danger"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Back to Input</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3315,6 +3688,25 @@ Room Codes (Room- Codes)
                     <button id="messageConfirm" class="button success" style="display: none;">Accept with Suffix</button>
                     <button id="messageCancel" class="button secondary" style="display: none;">Cancel</button>
                 </div>
+            </div>
+        </div>
+
+        <div id="ecsGlobalSearchModal" class="modal">
+            <div class="modal-content ecs-global-search-modal">
+                <div class="ecs-global-search-header">
+                    <h3>Find ECS code</h3>
+                    <button id="ecsGlobalSearchClose" class="ecs-global-search-close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <input
+                    id="ecsGlobalSearchInput"
+                    class="ecs-global-search-input"
+                    type="search"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Search uploaded ECS codes"
+                >
+                <div id="ecsGlobalSearchCurrentRoom" class="ecs-global-search-current"></div>
+                <div id="ecsGlobalSearchResults" class="ecs-global-search-results"></div>
             </div>
         </div>
     </div>
@@ -3491,6 +3883,20 @@ Room Codes (Room- Codes)
 
         // Global variables
         var _ecsEditorOpen = false; // Tracks ECS dropdown editor panel open state
+
+        function setBottomNavButtonLabel(button, label) {
+            if (!button) return;
+            const compactLabel = label === 'Next Room' ? 'Next' : (label === 'Complete' ? 'Done' : label);
+            const labelEl = button.querySelector('span');
+            if (labelEl) {
+                labelEl.textContent = compactLabel;
+            } else {
+                button.textContent = compactLabel;
+            }
+            button.setAttribute('aria-label', label === 'Complete' ? 'Complete Inspection' : label);
+            button.classList.toggle('nav-complete', label === 'Complete');
+        }
+
         let appState = {
             
             flexibleInspections: {
@@ -3847,6 +4253,19 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('downloadJsonCodeCheckPage').addEventListener('click', downloadJsonData);
             document.getElementById('shareCodeCheckPage').addEventListener('click', showShareModal);
             document.getElementById('backToCodeInput').addEventListener('click', backToCodeInput);
+            document.getElementById('openEcsGlobalSearchDesktop').addEventListener('click', showEcsGlobalSearchModal);
+            document.getElementById('openEcsGlobalSearchMobile').addEventListener('click', showEcsGlobalSearchModal);
+            document.getElementById('ecsGlobalSearchClose').addEventListener('click', hideEcsGlobalSearchModal);
+            document.getElementById('ecsGlobalSearchInput').addEventListener('input', renderEcsGlobalSearchResults);
+            document.getElementById('ecsGlobalSearchResults').addEventListener('click', handleEcsGlobalSearchAction);
+            document.getElementById('ecsGlobalSearchModal').addEventListener('click', function(event) {
+                if (event.target.id === 'ecsGlobalSearchModal') hideEcsGlobalSearchModal();
+            });
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && document.getElementById('ecsGlobalSearchModal').classList.contains('active')) {
+                    hideEcsGlobalSearchModal();
+                }
+            });
 
             // ECS Quick Entry toggle
             document.getElementById('ecsQuickEntryToggle').addEventListener('click', function() {
@@ -4877,9 +5296,9 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             prevBtn.disabled = appState.currentRoomIndex === 0;
             
             if (appState.currentRoomIndex === appState.rooms.length - 1) {
-                nextBtn.textContent = 'Complete';
+                setBottomNavButtonLabel(nextBtn, 'Complete');
             } else {
-                nextBtn.textContent = 'Next Room';
+                setBottomNavButtonLabel(nextBtn, 'Next Room');
             }
         }
 
@@ -4921,9 +5340,9 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             prevBtn.disabled = appState.currentCodeRoomIndex === 0;
             
             if (appState.currentCodeRoomIndex === roomNames.length - 1) {
-                nextBtn.textContent = 'Complete';
+                setBottomNavButtonLabel(nextBtn, 'Complete');
             } else {
-                nextBtn.textContent = 'Next Room';
+                setBottomNavButtonLabel(nextBtn, 'Next Room');
             }
         }
 
@@ -5368,7 +5787,7 @@ if (presets.length) {
             const prevBtn = document.getElementById('prevAssetTagz2Room');
             const nextBtn = document.getElementById('nextAssetTagz2Room');
             prevBtn.disabled = at.currentRoomIndex === 0;
-            nextBtn.textContent = (at.currentRoomIndex === roomNames.length - 1) ? 'Complete' : 'Next Room';
+            setBottomNavButtonLabel(nextBtn, (at.currentRoomIndex === roomNames.length - 1) ? 'Complete' : 'Next Room');
         }
 
         function updateAssetTagz2RoomSelectColor() {
@@ -5571,6 +5990,8 @@ if (presets.length) {
 
                 const rowDiv = document.createElement('div');
                 rowDiv.className = 'grid-row';
+                rowDiv.dataset.ecsCode = code;
+                rowDiv.dataset.roomName = currentRoomName;
 
                 // Code cell
                 const codeCell = document.createElement('div');
@@ -6112,6 +6533,8 @@ barcodeWrapper.appendChild(barcodeInput);
                 
                 const rowDiv = document.createElement('div');
                 rowDiv.className = 'grid-row';
+                rowDiv.dataset.ecsCode = code;
+                rowDiv.dataset.roomName = currentRoomName;
 
                 // Code cell
                 const codeCell = document.createElement('div');
@@ -6361,6 +6784,8 @@ barcodeWrapper.appendChild(barcodeInput);
             const row = document.createElement('div');
             row.className = 'ecs-quick-entry-row confirmed';
             row.dataset.code = code;
+            row.dataset.ecsCode = code;
+            row.dataset.roomName = roomName;
             // Allow the controls below to stack on narrow screens
             row.style.flexDirection = 'column';
             row.style.alignItems = 'stretch';
@@ -7159,6 +7584,367 @@ barcodeWrapper.appendChild(barcodeInput);
             });
         }
 
+        let ecsGlobalSearchMatches = [];
+
+        function getCurrentEcsRoomName() {
+            const roomNames = Object.keys(appState.roomCodes || {});
+            return roomNames[appState.currentCodeRoomIndex] || '';
+        }
+
+        function normalizeEcsSearchValue(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function compactEcsSearchValue(value) {
+            return normalizeEcsSearchValue(value).replace(/[\s_-]+/g, '');
+        }
+
+        function hasOwnKey(obj, key) {
+            return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+        }
+
+        function ecsCodeHasStatus(roomName, code) {
+            const codeId = `${roomName}-${code}`;
+            const status = appState.checkData ? appState.checkData[codeId] : null;
+            return status !== null && status !== undefined;
+        }
+
+        function getEcsGlobalSearchMatches(query) {
+            const q = normalizeEcsSearchValue(query);
+            const compactQ = compactEcsSearchValue(query);
+            if (!q && !compactQ) return [];
+
+            const matches = [];
+            const roomNames = Object.keys(appState.roomCodes || {});
+
+            roomNames.forEach((roomName, roomIndex) => {
+                const codes = appState.roomCodes[roomName] || [];
+                codes.forEach((code, codeIndex) => {
+                    if (ecsCodeHasStatus(roomName, code)) return;
+
+                    const codeText = String(code || '');
+                    const codeLower = normalizeEcsSearchValue(codeText);
+                    const codeCompact = compactEcsSearchValue(codeText);
+                    const roomLower = normalizeEcsSearchValue(roomName);
+
+                    let score = null;
+                    if (codeLower === q || codeCompact === compactQ) score = 0;
+                    else if (codeLower.startsWith(q) || (compactQ && codeCompact.startsWith(compactQ))) score = 1;
+                    else if (codeLower.includes(q) || (compactQ && codeCompact.includes(compactQ))) score = 2;
+                    else if (roomLower.includes(q)) score = 3;
+
+                    if (score !== null) {
+                        matches.push({ roomName, roomIndex, code: codeText, codeIndex, score });
+                    }
+                });
+            });
+
+            return matches.sort((a, b) => {
+                if (a.score !== b.score) return a.score - b.score;
+                if (a.roomIndex !== b.roomIndex) return a.roomIndex - b.roomIndex;
+                return a.codeIndex - b.codeIndex;
+            });
+        }
+
+        function showEcsGlobalSearchModal() {
+            const modal = document.getElementById('ecsGlobalSearchModal');
+            const input = document.getElementById('ecsGlobalSearchInput');
+            if (!modal || !input) return;
+
+            modal.classList.add('active');
+            renderEcsGlobalSearchResults();
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 60);
+        }
+
+        function hideEcsGlobalSearchModal() {
+            const modal = document.getElementById('ecsGlobalSearchModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        function renderEcsGlobalSearchResults() {
+            const input = document.getElementById('ecsGlobalSearchInput');
+            const currentRoomEl = document.getElementById('ecsGlobalSearchCurrentRoom');
+            const resultsEl = document.getElementById('ecsGlobalSearchResults');
+            if (!input || !currentRoomEl || !resultsEl) return;
+
+            const currentRoom = getCurrentEcsRoomName();
+            currentRoomEl.textContent = currentRoom
+                ? `Current room: ${currentRoom} · showing codes with no status`
+                : 'No ECS room selected';
+
+            const query = input.value.trim();
+            resultsEl.innerHTML = '';
+            ecsGlobalSearchMatches = [];
+
+            if (!query) {
+                const empty = document.createElement('div');
+                empty.className = 'ecs-global-search-empty';
+                empty.textContent = 'Start typing an ECS code.';
+                resultsEl.appendChild(empty);
+                return;
+            }
+
+            const matches = getEcsGlobalSearchMatches(query);
+            if (!matches.length) {
+                const empty = document.createElement('div');
+                empty.className = 'ecs-global-search-empty';
+                empty.textContent = 'No matching ECS codes without a status found.';
+                resultsEl.appendChild(empty);
+                return;
+            }
+
+            ecsGlobalSearchMatches = matches.slice(0, 50);
+            const targetCodes = (appState.roomCodes[currentRoom] || []).map(code => normalizeEcsSearchValue(code));
+
+            ecsGlobalSearchMatches.forEach((match, index) => {
+                const isCurrentRoom = match.roomName === currentRoom;
+                const targetAlreadyHasCode = !isCurrentRoom && targetCodes.includes(normalizeEcsSearchValue(match.code));
+
+                const card = document.createElement('div');
+                card.className = 'ecs-global-result';
+
+                const main = document.createElement('div');
+                main.className = 'ecs-global-result-main';
+
+                const textWrap = document.createElement('div');
+                const codeEl = document.createElement('div');
+                codeEl.className = 'ecs-global-result-code';
+                codeEl.textContent = match.code;
+                const roomEl = document.createElement('div');
+                roomEl.className = 'ecs-global-result-room';
+                roomEl.textContent = match.roomName;
+                textWrap.appendChild(codeEl);
+                textWrap.appendChild(roomEl);
+
+                const badge = document.createElement('div');
+                badge.className = 'ecs-global-result-badge';
+                badge.textContent = isCurrentRoom ? 'Here' : `Room ${match.roomIndex + 1}`;
+
+                main.appendChild(textWrap);
+                main.appendChild(badge);
+
+                const actions = document.createElement('div');
+                actions.className = 'ecs-global-result-actions';
+
+                const goBtn = document.createElement('button');
+                goBtn.type = 'button';
+                goBtn.className = 'ecs-global-result-action';
+                goBtn.textContent = isCurrentRoom ? 'Show code' : 'Go to room';
+                goBtn.dataset.action = 'go';
+                goBtn.dataset.matchIndex = index;
+
+                const moveBtn = document.createElement('button');
+                moveBtn.type = 'button';
+                moveBtn.className = 'ecs-global-result-action primary';
+                moveBtn.textContent = isCurrentRoom ? 'In current room' : (targetAlreadyHasCode ? 'Already here' : 'Move here');
+                moveBtn.dataset.action = 'move';
+                moveBtn.dataset.matchIndex = index;
+                moveBtn.disabled = isCurrentRoom || targetAlreadyHasCode;
+
+                actions.appendChild(goBtn);
+                actions.appendChild(moveBtn);
+
+                card.appendChild(main);
+                card.appendChild(actions);
+                resultsEl.appendChild(card);
+            });
+
+            if (matches.length > ecsGlobalSearchMatches.length) {
+                const more = document.createElement('div');
+                more.className = 'ecs-global-search-empty';
+                more.textContent = `${matches.length - ecsGlobalSearchMatches.length} more result(s). Keep typing to narrow it down.`;
+                resultsEl.appendChild(more);
+            }
+        }
+
+        async function handleEcsGlobalSearchAction(event) {
+            const button = event.target.closest('.ecs-global-result-action');
+            if (!button) return;
+
+            const match = ecsGlobalSearchMatches[parseInt(button.dataset.matchIndex, 10)];
+            if (!match) return;
+
+            if (button.dataset.action === 'go') {
+                hideEcsGlobalSearchModal();
+                jumpToEcsCode(match.roomName, match.code);
+                return;
+            }
+
+            if (button.dataset.action === 'move') {
+                button.disabled = true;
+                await moveEcsCodeToCurrentRoom(match);
+            }
+        }
+
+        function ensureEcsQuickEntryCodeVisible(roomName, code) {
+            if (!appState.ecsQuickEntryState) appState.ecsQuickEntryState = {};
+            if (!appState.ecsQuickEntryState[roomName]) {
+                appState.ecsQuickEntryState[roomName] = { confirmedCodes: [] };
+            }
+            const state = appState.ecsQuickEntryState[roomName];
+            if (!Array.isArray(state.confirmedCodes)) state.confirmedCodes = [];
+            if (!state.confirmedCodes.includes(code)) state.confirmedCodes.push(code);
+        }
+
+        function highlightEcsCodeRow(code) {
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    const rows = [...document.querySelectorAll('#codeChecksContainer .grid-row, #codeChecksContainer .ecs-quick-entry-row.confirmed')];
+                    const row = rows.find(el => {
+                        if (el.dataset.ecsCode === code || el.dataset.code === code) return true;
+                        const codeCell = el.querySelector('.grid-cell.code-cell, .ecs-confirmed-code');
+                        return codeCell && codeCell.textContent.trim() === code;
+                    });
+                    if (!row) return;
+                    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    row.classList.add('ecs-code-search-hit');
+                    setTimeout(() => row.classList.remove('ecs-code-search-hit'), 1900);
+                }, 80);
+            });
+        }
+
+        function jumpToEcsCode(roomName, code) {
+            const roomNames = Object.keys(appState.roomCodes || {});
+            const roomIndex = roomNames.indexOf(roomName);
+            if (roomIndex === -1) return;
+
+            appState.currentCodeRoomIndex = roomIndex;
+            if (appState.ecsQuickEntryMode) ensureEcsQuickEntryCodeVisible(roomName, code);
+            showCodeCheckPage();
+            updateCodeCheckPage();
+            generateCodeCheckItems();
+            updateCodeCheckStates();
+            saveDataToStorage();
+            highlightEcsCodeRow(code);
+        }
+
+        function moveEcsDataKey(oldCodeId, newCodeId) {
+            appState.checkData = appState.checkData || {};
+            appState.codeSpecificComments = appState.codeSpecificComments || {};
+            appState.ecsExtraData = appState.ecsExtraData || {};
+
+            if (hasOwnKey(appState.checkData, oldCodeId)) {
+                appState.checkData[newCodeId] = appState.checkData[oldCodeId];
+                delete appState.checkData[oldCodeId];
+            } else if (!hasOwnKey(appState.checkData, newCodeId)) {
+                appState.checkData[newCodeId] = null;
+            }
+
+            if (hasOwnKey(appState.codeSpecificComments, oldCodeId)) {
+                appState.codeSpecificComments[newCodeId] = appState.codeSpecificComments[oldCodeId];
+                delete appState.codeSpecificComments[oldCodeId];
+            } else if (!hasOwnKey(appState.codeSpecificComments, newCodeId)) {
+                appState.codeSpecificComments[newCodeId] = '';
+            }
+
+            Object.keys(appState.ecsExtraData).forEach(listId => {
+                const listData = appState.ecsExtraData[listId];
+                if (!listData || typeof listData !== 'object') return;
+                if (hasOwnKey(listData, oldCodeId)) {
+                    listData[newCodeId] = listData[oldCodeId];
+                    delete listData[oldCodeId];
+                }
+            });
+        }
+
+        function moveEcsQuickEntryState(sourceRoom, targetRoom, code) {
+            if (!appState.ecsQuickEntryState) return;
+            let wasConfirmed = false;
+
+            const sourceState = appState.ecsQuickEntryState[sourceRoom];
+            if (sourceState && Array.isArray(sourceState.confirmedCodes)) {
+                const before = sourceState.confirmedCodes.length;
+                sourceState.confirmedCodes = sourceState.confirmedCodes.filter(item => item !== code);
+                wasConfirmed = sourceState.confirmedCodes.length !== before;
+            }
+
+            if (wasConfirmed || appState.ecsQuickEntryMode) {
+                ensureEcsQuickEntryCodeVisible(targetRoom, code);
+            }
+        }
+
+        function syncCodeListTextareaFromState() {
+            if (!codeListTextarea) return;
+            const lines = [];
+            Object.keys(appState.roomCodes || {}).forEach(roomName => {
+                const codes = appState.roomCodes[roomName] || [];
+                if (codes.length > 0) lines.push(`${roomName}- ${codes.join(' ')}`);
+            });
+            codeListTextarea.value = lines.join('\n');
+        }
+
+        async function reassignPhotosForCodeId(oldCodeId, newCodeId, newRoomName, ecsCode) {
+            if (oldCodeId === newCodeId) return;
+            try {
+                const photos = await getPhotosByCodeId(oldCodeId);
+                if (!photos.length) return;
+
+                const db = await openPhotoDB();
+                await new Promise((resolve, reject) => {
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    photos.forEach(photo => {
+                        photo.codeId = newCodeId;
+                        photo.roomName = newRoomName;
+                        photo.ecsCode = ecsCode;
+                        photo.label = `${newRoomName} / ${ecsCode}\n${formatDateTime(photo.timestamp)}`;
+                        store.put(photo);
+                    });
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = e => reject(e.target.error);
+                });
+            } catch (error) {
+                console.warn('Photo reassignment failed:', error);
+            }
+        }
+
+        async function moveEcsCodeToCurrentRoom(match) {
+            const targetRoom = getCurrentEcsRoomName();
+            const sourceRoom = match.roomName;
+            const code = match.code;
+            if (!targetRoom || !sourceRoom || !code) return;
+
+            if (sourceRoom === targetRoom) {
+                hideEcsGlobalSearchModal();
+                jumpToEcsCode(targetRoom, code);
+                return;
+            }
+
+            const sourceCodes = appState.roomCodes[sourceRoom] || [];
+            const sourceIndex = sourceCodes.findIndex(item => item === code);
+            if (sourceIndex === -1) {
+                renderEcsGlobalSearchResults();
+                return;
+            }
+
+            if (!appState.roomCodes[targetRoom]) appState.roomCodes[targetRoom] = [];
+            const targetCodes = appState.roomCodes[targetRoom];
+            const targetHasCode = targetCodes.some(item => normalizeEcsSearchValue(item) === normalizeEcsSearchValue(code));
+            if (targetHasCode) {
+                hideEcsGlobalSearchModal();
+                showMessageModal('Already in Room', `${code} already exists in ${targetRoom}.`);
+                return;
+            }
+
+            const movedCode = sourceCodes.splice(sourceIndex, 1)[0];
+            targetCodes.push(movedCode);
+
+            const oldCodeId = `${sourceRoom}-${movedCode}`;
+            const newCodeId = `${targetRoom}-${movedCode}`;
+            moveEcsDataKey(oldCodeId, newCodeId);
+            moveEcsQuickEntryState(sourceRoom, targetRoom, movedCode);
+            syncCodeListTextareaFromState();
+
+            await reassignPhotosForCodeId(oldCodeId, newCodeId, targetRoom, movedCode);
+
+            saveDataToStorage();
+            hideEcsGlobalSearchModal();
+            jumpToEcsCode(targetRoom, movedCode);
+        }
+
 
         // ============================================================================
         //  ROOM SE/ST/SV FLOW — page render + counters + entries
@@ -7191,11 +7977,11 @@ barcodeWrapper.appendChild(barcodeInput);
             prevBtn.disabled = appState.currentSeStSvRoomIndex === 0;
             
             if (appState.currentSeStSvRoomIndex === appState.seStSvRooms.length - 1) {
-                nextBtn.style.display = 'block';
-                nextBtn.textContent = 'Complete';
+                nextBtn.style.display = '';
+                setBottomNavButtonLabel(nextBtn, 'Complete');
             } else {
-                nextBtn.style.display = 'block';
-                nextBtn.textContent = 'Next Room';
+                nextBtn.style.display = '';
+                setBottomNavButtonLabel(nextBtn, 'Next Room');
             }
         }
 
@@ -8210,7 +8996,7 @@ barcodeWrapper.appendChild(barcodeInput);
             const prevBtn = document.getElementById('flexPrevRoom');
             const nextBtn = document.getElementById('flexNextRoom');
             prevBtn.disabled = flex.currentRoomIndex === 0;
-            nextBtn.textContent = flex.currentRoomIndex === rooms.length - 1 ? 'Complete' : 'Next Room';
+            setBottomNavButtonLabel(nextBtn, flex.currentRoomIndex === rooms.length - 1 ? 'Complete' : 'Next Room');
 
             updateFlexCounters();
         }
@@ -9359,7 +10145,9 @@ function renderFlexBarcodeRows() {
             }
         }
 
-        document.getElementById('downloadAllPhotosBtn').addEventListener('click', downloadAllPhotosZip);
+        document.querySelectorAll('.bottom-nav-photo-btn').forEach(btn => {
+            btn.addEventListener('click', downloadAllPhotosZip);
+        });
         document.getElementById('photoModalDownloadAll').addEventListener('click', downloadAllPhotosZip);
 
         // ── Hook into ECS status/comment selection via event delegation ──
@@ -10337,6 +11125,58 @@ function renderFlexBarcodeRows() {
 
             // Run once on page load in case data already exists
             setTimeout(refresh, 200);
+        })();
+    </script>
+
+
+    <script>
+        (function () {
+            'use strict';
+
+            function closeSheet(sheet, scrim, btn) {
+                sheet.classList.remove('sheet-open');
+                scrim.classList.remove('scrim-visible');
+                btn.setAttribute('aria-expanded', 'false');
+                document.body.style.overflow = '';
+            }
+
+            document.querySelectorAll('.bottom-nav-page').forEach(function (navPage) {
+                const nav = navPage.querySelector('.bottom-nav-actions');
+                const sheet = navPage.querySelector('.bottom-nav-more-sheet');
+                const scrim = navPage.querySelector('.bottom-nav-scrim');
+                const moreBtn = navPage.querySelector('.bottom-nav-more-btn');
+                let scrollTimer = null;
+                let lastY = window.scrollY;
+
+                window.addEventListener('scroll', function () {
+                    const y = window.scrollY;
+                    if (Math.abs(y - lastY) > 2) nav.classList.add('nav-shrunk');
+                    lastY = y;
+                    clearTimeout(scrollTimer);
+                    scrollTimer = setTimeout(function () { nav.classList.remove('nav-shrunk'); }, 400);
+                }, { passive: true });
+
+                navPage.querySelectorAll('.bottom-nav-desktop-btn[data-click-target]').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        const target = document.getElementById(btn.getAttribute('data-click-target'));
+                        if (target) target.click();
+                    });
+                });
+
+                moreBtn.addEventListener('click', function () {
+                    sheet.classList.add('sheet-open');
+                    scrim.classList.add('scrim-visible');
+                    moreBtn.setAttribute('aria-expanded', 'true');
+                    document.body.style.overflow = 'hidden';
+                });
+                scrim.addEventListener('click', function () { closeSheet(sheet, scrim, moreBtn); });
+                sheet.addEventListener('click', function (event) {
+                    if (event.target.closest('.bottom-nav-sheet-btn')) closeSheet(sheet, scrim, moreBtn);
+                });
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') closeSheet(sheet, scrim, moreBtn);
+                });
+            });
         })();
     </script>
 
