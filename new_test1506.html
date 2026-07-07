@@ -10165,6 +10165,9 @@ function renderFlexBarcodeRows() {
                                 }
 
                                 updateCodeCheckStates();
+                                updateCodeRoomSelectColor();
+                                updateCodeRoomSelector();
+                                if (typeof window._ecsRefreshBadge === 'function') window._ecsRefreshBadge();
                                 validExtraTargets.forEach(target => _showCameraForCodeId(target.codeId));
                                 await refreshCount();
                                 showMessageModal('Photo Saved ✓', `Photo saved for ${formatEcsCodesForStamp(saveTargets.map(target => target.ecsCode))}.`);
@@ -10886,18 +10889,69 @@ function renderFlexBarcodeRows() {
             if (selected) selected.innerHTML = '';
         }
 
-        function updateStampEcsLineFromSelection(canvas, lines, rawDataUrl) {
+        function getStampSelectedEcsCodes() {
             if (!_stampEditorState) return;
-            const line = lines.find(item => item.id === 'line-room');
-            if (!line) return;
-            const selectedCodes = [
+            return [
                 _stampEditorState.ecsCode,
                 ...((_stampEditorState.extraEcsTargets || []).map(target => target.ecsCode))
             ];
-            line.text = `Room: ${_stampEditorState.roomName}   ECS: ${formatEcsCodesForStamp(selectedCodes)}`;
+        }
 
-            const input = document.querySelector('.stamp-line-row[data-line-id="line-room"] .stamp-line-input');
-            if (input) input.value = line.text;
+        function syncStampLocationLines(lines) {
+            if (!_stampEditorState) return false;
+
+            const selectedCodes = getStampSelectedEcsCodes() || [];
+            const ecsText = formatEcsCodesForStamp(selectedCodes);
+            const roomLine = lines.find(item => item.id === 'line-room');
+            if (!roomLine) return false;
+
+            const ecsLineIndex = lines.findIndex(item => item.id === 'line-ecs');
+            const splitLocation = selectedCodes.length > 2;
+            let structureChanged = false;
+
+            if (splitLocation) {
+                roomLine.label = 'Room';
+                roomLine.text = `Room: ${_stampEditorState.roomName}`;
+                if (ecsLineIndex === -1) {
+                    const roomIndex = lines.indexOf(roomLine);
+                    lines.splice(roomIndex + 1, 0, {
+                        id: 'line-ecs',
+                        label: 'ECS',
+                        text: `ECS: ${ecsText}`,
+                        on: true,
+                        bold: true,
+                        color: '#ffffff',
+                        small: true
+                    });
+                    structureChanged = true;
+                } else {
+                    lines[ecsLineIndex].text = `ECS: ${ecsText}`;
+                    lines[ecsLineIndex].on = true;
+                }
+            } else {
+                roomLine.label = 'Location';
+                roomLine.text = `Room: ${_stampEditorState.roomName}   ECS: ${ecsText}`;
+                if (ecsLineIndex !== -1) {
+                    lines.splice(ecsLineIndex, 1);
+                    structureChanged = true;
+                }
+            }
+
+            return structureChanged;
+        }
+
+        function updateStampEcsLineFromSelection(canvas, lines, rawDataUrl) {
+            const structureChanged = syncStampLocationLines(lines);
+            if (structureChanged) {
+                _rebuildStampEditor(canvas, lines, rawDataUrl);
+                return;
+            }
+
+            ['line-room', 'line-ecs'].forEach(lineId => {
+                const line = lines.find(item => item.id === lineId);
+                const input = document.querySelector(`.stamp-line-row[data-line-id="${lineId}"] .stamp-line-input`);
+                if (line && input) input.value = line.text;
+            });
             renderStampPreview(canvas, lines, rawDataUrl);
         }
 
@@ -11089,6 +11143,8 @@ function renderFlexBarcodeRows() {
                 extraEcsTargets: []
             };
 
+            syncStampLocationLines(lines);
+
             // Build editor rows
             editor.innerHTML = '';
             lines.forEach((line, i) => {
@@ -11236,7 +11292,7 @@ function renderFlexBarcodeRows() {
             lbl.textContent = line.label || '';
 
             // ── Delete button — only for custom/extra lines, not fixed ones ──────
-            const fixedIds = ['line-room', 'line-info', 'line-time'];
+            const fixedIds = ['line-room', 'line-ecs', 'line-info', 'line-time'];
             const isDeletable = !line.id || !fixedIds.includes(line.id);
             if (isDeletable) {
                 const delBtn = document.createElement('button');
