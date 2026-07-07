@@ -9904,17 +9904,21 @@ function renderFlexBarcodeRows() {
             });
         }
 
-        async function savePhoto(codeId, roomName, ecsCode, dataUrl) {
+        async function savePhoto(codeId, roomName, ecsCode, dataUrl, options = {}) {
             const db = await openPhotoDB();
             return new Promise((resolve, reject) => {
                 const now = new Date();
+                const labelEcsCode = options.displayEcsCode || ecsCode;
                 const record = {
                     codeId,
                     roomName,
                     ecsCode,
+                    exportEcsCode: options.exportEcsCode || ecsCode,
+                    groupPhotoId: options.groupPhotoId || null,
+                    groupEcsCodes: options.groupEcsCodes || null,
                     dataUrl,
                     timestamp: now.toISOString(),
-                    label: `${roomName} / ${ecsCode}\n${formatDateTime(now)}`
+                    label: `${roomName} / ${labelEcsCode}\n${formatDateTime(now)}`
                 };
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const req = tx.objectStore(STORE_NAME).add(record);
@@ -10152,8 +10156,17 @@ function renderFlexBarcodeRows() {
                                     { codeId: uniqueCodeId, roomName, ecsCode },
                                     ...validExtraTargets
                                 ];
+                                const saveTargetCodes = saveTargets.map(target => target.ecsCode);
+                                const groupedPhotoOptions = saveTargets.length > 1
+                                    ? {
+                                        exportEcsCode: saveTargetCodes.join('_'),
+                                        displayEcsCode: formatEcsCodesForStamp(saveTargetCodes),
+                                        groupPhotoId: `${uniqueCodeId}-${Date.now()}`,
+                                        groupEcsCodes: saveTargetCodes
+                                    }
+                                    : {};
                                 for (const target of saveTargets) {
-                                    await savePhoto(target.codeId, target.roomName, target.ecsCode, finalDataUrl);
+                                    await savePhoto(target.codeId, target.roomName, target.ecsCode, finalDataUrl, groupedPhotoOptions);
                                 }
 
                                 if (statusToCopy !== null && validExtraTargets.length) {
@@ -10170,7 +10183,7 @@ function renderFlexBarcodeRows() {
                                 if (typeof window._ecsRefreshBadge === 'function') window._ecsRefreshBadge();
                                 validExtraTargets.forEach(target => _showCameraForCodeId(target.codeId));
                                 await refreshCount();
-                                showMessageModal('Photo Saved ✓', `Photo saved for ${formatEcsCodesForStamp(saveTargets.map(target => target.ecsCode))}.`);
+                                showMessageModal('Photo Saved ✓', `Photo saved for ${formatEcsCodesForStamp(saveTargetCodes)}.`);
                             } catch(err) {
                                 showMessageModal('Error', 'Could not save photo. Storage may be full.');
                             }
@@ -10307,16 +10320,26 @@ function renderFlexBarcodeRows() {
                 return;
             }
 
-            showMessageModal('Preparing ZIP', `Bundling ${photos.length} photo(s)… please wait.`);
+            const photosForZip = [];
+            const seenGroupPhotoIds = {};
+            photos.forEach(photo => {
+                if (photo.groupPhotoId) {
+                    if (seenGroupPhotoIds[photo.groupPhotoId]) return;
+                    seenGroupPhotoIds[photo.groupPhotoId] = true;
+                }
+                photosForZip.push(photo);
+            });
+
+            showMessageModal('Preparing ZIP', `Bundling ${photosForZip.length} photo(s)… please wait.`);
 
             try {
                 const zip = new JSZip();
                 const folder = zip.folder('inspection_photos');
 
                 const filenameCounts = {};
-                photos.forEach((photo, i) => {
+                photosForZip.forEach((photo, i) => {
                     const base64 = photo.dataUrl.split(',')[1];
-                    const safe = (str) => str.replace(/[^a-z0-9_\-]/gi, '_');
+                    const safe = (str) => String(str || '').replace(/[^a-z0-9_\-]/gi, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
                     const ts = new Date(photo.timestamp);
                     const dd = String(ts.getDate()).padStart(2, '0');
                     const mm = String(ts.getMonth() + 1).padStart(2, '0');
@@ -10325,7 +10348,8 @@ function renderFlexBarcodeRows() {
                     const min = String(ts.getMinutes()).padStart(2, '0');
                     const ss = String(ts.getSeconds()).padStart(2, '0');
                     // Include full timestamp (HHMMSS) so each photo gets a unique name
-                    const baseFilename = `${safe(photo.roomName)}-${safe(photo.ecsCode)}-${dd}${mm}${yy}-${hh}${min}${ss}`;
+                    const ecsNameForExport = photo.exportEcsCode || photo.ecsCode;
+                    const baseFilename = `${safe(photo.roomName)}-${safe(ecsNameForExport)}-${dd}${mm}${yy}-${hh}${min}${ss}`;
                     // Also track count per base name to handle photos taken in the same second
                     filenameCounts[baseFilename] = (filenameCounts[baseFilename] || 0) + 1;
                     const suffix = filenameCounts[baseFilename] > 1 ? `_${filenameCounts[baseFilename]}` : '';
