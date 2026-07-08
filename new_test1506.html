@@ -9995,7 +9995,7 @@ function renderFlexBarcodeRows() {
                 });
         }
 
-        function formatEcsCodesForStamp(codes) {
+        function getUniqueEcsCodes(codes) {
             const uniqueCodes = [];
             const seen = new Set();
             (codes || []).forEach(code => {
@@ -10005,7 +10005,12 @@ function renderFlexBarcodeRows() {
                     uniqueCodes.push(text);
                 }
             });
-            if (uniqueCodes.length <= 1) return uniqueCodes[0] || '';
+            return uniqueCodes;
+        }
+
+        function getCompactEcsCodeSegments(codes) {
+            const uniqueCodes = getUniqueEcsCodes(codes);
+            if (uniqueCodes.length <= 1) return uniqueCodes;
 
             const groups = [];
             uniqueCodes.forEach(code => {
@@ -10020,15 +10025,19 @@ function renderFlexBarcodeRows() {
                 group.parts.push(match ? { prefix: match[1], suffix: match[2] } : null);
             });
 
-            return groups.map(group => {
-                if (group.codes.length === 1) return group.codes[0];
+            return groups.flatMap(group => {
+                if (group.codes.length === 1) return [group.codes[0]];
                 const canCompactTrailingNumbers = group.parts.every(Boolean) &&
                     group.parts.every(part => part.prefix === group.parts[0].prefix);
                 if (canCompactTrailingNumbers) {
-                    return [group.codes[0], ...group.parts.slice(1).map(part => part.suffix)].join(' / ');
+                    return [group.codes[0], ...group.parts.slice(1).map(part => part.suffix)];
                 }
-                return group.codes.join(' / ');
-            }).join(' / ');
+                return group.codes;
+            });
+        }
+
+        function formatEcsCodesForStamp(codes) {
+            return getCompactEcsCodeSegments(codes).join(' / ');
         }
 
         // ── Stamp photo with room / ECS code / datetime overlay ──────────
@@ -10921,6 +10930,46 @@ function renderFlexBarcodeRows() {
             ];
         }
 
+        function getEcsStampTextWeight(text) {
+            return [...String(text || '')].reduce((total, char) => {
+                if (char === ' ') return total + 0.25;
+                if (char === '/') return total + 0.45;
+                if (char === '-') return total + 0.55;
+                if (/[0-9]/.test(char)) return total + 0.85;
+                return total + 1;
+            }, 0);
+        }
+
+        function buildEcsStampLineTexts(codes) {
+            const segments = getCompactEcsCodeSegments(codes);
+            if (!segments.length) return [];
+
+            const lines = [];
+            let current = [];
+            const maxLineWeight = 34;
+            const maxSegmentsPerLine = 4;
+
+            segments.forEach(segment => {
+                const candidate = [...current, segment].join(' / ');
+                const candidateTooLong = getEcsStampTextWeight(candidate) > maxLineWeight;
+                const candidateTooBusy = current.length >= maxSegmentsPerLine;
+
+                if (current.length && (candidateTooLong || candidateTooBusy)) {
+                    lines.push(current.join(' / '));
+                    current = [segment];
+                } else {
+                    current.push(segment);
+                }
+            });
+
+            if (current.length) lines.push(current.join(' / '));
+            return lines.map(line => `ECS: ${line}`);
+        }
+
+        function isStampEcsLine(line) {
+            return !!line && (line.id === 'line-ecs' || String(line.id || '').startsWith('line-ecs-'));
+        }
+
         function syncStampLocationLines(lines) {
             if (!_stampEditorState) return false;
 
@@ -10929,35 +10978,41 @@ function renderFlexBarcodeRows() {
             const roomLine = lines.find(item => item.id === 'line-room');
             if (!roomLine) return false;
 
-            const ecsLineIndex = lines.findIndex(item => item.id === 'line-ecs');
             const splitLocation = selectedCodes.length > 2;
             let structureChanged = false;
 
             if (splitLocation) {
                 roomLine.label = 'Room';
                 roomLine.text = `Room: ${_stampEditorState.roomName}`;
-                if (ecsLineIndex === -1) {
-                    const roomIndex = lines.indexOf(roomLine);
-                    lines.splice(roomIndex + 1, 0, {
-                        id: 'line-ecs',
+                const ecsLineTexts = buildEcsStampLineTexts(selectedCodes);
+                const oldEcsLines = lines.filter(isStampEcsLine);
+
+                structureChanged = true;
+                for (let i = lines.length - 1; i >= 0; i--) {
+                    if (isStampEcsLine(lines[i])) lines.splice(i, 1);
+                }
+
+                const roomIndex = lines.indexOf(roomLine);
+                const newEcsLines = ecsLineTexts.map((text, index) => {
+                    const oldLine = oldEcsLines[index] || {};
+                    return {
+                        id: `line-ecs-${index}`,
                         label: 'ECS',
-                        text: `ECS: ${ecsText}`,
-                        on: true,
+                        text,
+                        on: oldLine.on !== false,
                         bold: true,
                         color: '#ffffff',
                         small: true
-                    });
-                    structureChanged = true;
-                } else {
-                    lines[ecsLineIndex].text = `ECS: ${ecsText}`;
-                    lines[ecsLineIndex].on = true;
-                }
+                    };
+                });
+                lines.splice(roomIndex + 1, 0, ...newEcsLines);
             } else {
                 roomLine.label = 'Location';
                 roomLine.text = `Room: ${_stampEditorState.roomName}   ECS: ${ecsText}`;
-                if (ecsLineIndex !== -1) {
-                    lines.splice(ecsLineIndex, 1);
-                    structureChanged = true;
+                const hadEcsLines = lines.some(isStampEcsLine);
+                if (hadEcsLines) structureChanged = true;
+                for (let i = lines.length - 1; i >= 0; i--) {
+                    if (isStampEcsLine(lines[i])) lines.splice(i, 1);
                 }
             }
 
@@ -10971,9 +11026,8 @@ function renderFlexBarcodeRows() {
                 return;
             }
 
-            ['line-room', 'line-ecs'].forEach(lineId => {
-                const line = lines.find(item => item.id === lineId);
-                const input = document.querySelector(`.stamp-line-row[data-line-id="${lineId}"] .stamp-line-input`);
+            lines.filter(line => line.id === 'line-room' || isStampEcsLine(line)).forEach(line => {
+                const input = document.querySelector(`.stamp-line-row[data-line-id="${line.id}"] .stamp-line-input`);
                 if (line && input) input.value = line.text;
             });
             renderStampPreview(canvas, lines, rawDataUrl);
@@ -11316,8 +11370,8 @@ function renderFlexBarcodeRows() {
             lbl.textContent = line.label || '';
 
             // ── Delete button — only for custom/extra lines, not fixed ones ──────
-            const fixedIds = ['line-room', 'line-ecs', 'line-info', 'line-time'];
-            const isDeletable = !line.id || !fixedIds.includes(line.id);
+            const fixedIds = ['line-room', 'line-info', 'line-time'];
+            const isDeletable = !line.id || (!fixedIds.includes(line.id) && !isStampEcsLine(line));
             if (isDeletable) {
                 const delBtn = document.createElement('button');
                 delBtn.type = 'button';
