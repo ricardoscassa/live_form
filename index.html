@@ -4073,7 +4073,7 @@ rooms: [],
         // Selectors used by updateCodeCheckStates() to refresh values:
         //   data-role="extra-btn-${list.id}"      (dropdown button)
         //   data-role="extra-options-${list.id}"  (dropdown options panel)
-        //   text inputs are matched by parent .control-label text
+        //   data-role="extra-text" + data-list-id + data-code-id (text input)
         function appendEcsExtraListColumns(controlsRow, uniqueCodeId) {
             const allLists = getEcsDropdownLists();
             if (allLists.length <= 2) return;
@@ -4100,6 +4100,9 @@ rooms: [],
                     textInput.style.cssText = 'cursor:text;padding-right:12px;';
                     textInput.placeholder = list.name + '...';
                     textInput.value = savedExtra;
+                    textInput.dataset.codeId = uniqueCodeId;
+                    textInput.dataset.listId = list.id;
+                    textInput.dataset.role = 'extra-text';
                     textInput.addEventListener('input', () => {
                         appState.ecsExtraData[list.id][uniqueCodeId] = textInput.value;
                         saveDataToStorage();
@@ -7559,15 +7562,9 @@ barcodeWrapper.appendChild(barcodeInput);
                 extraLists.forEach(list => {
                     const savedVal = (appState.ecsExtraData && appState.ecsExtraData[list.id] && appState.ecsExtraData[list.id][uniqueCodeId]) || '';
                     if (list.type === 'text') {
-                        // Find the text input by its placeholder (no data-role on text inputs)
-                        const wrapper = [...document.querySelectorAll('#codeChecksContainer .control-wrapper')].find(w => {
-                            const lbl = w.querySelector('.control-label');
-                            return lbl && lbl.textContent === list.name && w.querySelector('input[type="text"].status-button');
-                        });
-                        if (wrapper) {
-                            const inp = wrapper.querySelector('input[type="text"].status-button');
-                            if (inp) inp.value = savedVal;
-                        }
+                        const textInput = [...document.querySelectorAll('#codeChecksContainer [data-role="extra-text"]')]
+                            .find(inp => inp.dataset.listId === list.id && inp.dataset.codeId === uniqueCodeId);
+                        if (textInput) textInput.value = savedVal;
                     } else {
                         const extraBtn = document.querySelector(`[data-role="extra-btn-${list.id}"][data-code-id="${uniqueCodeId}"]`);
                         if (extraBtn) {
