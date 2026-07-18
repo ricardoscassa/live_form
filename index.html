@@ -2961,6 +2961,11 @@
             z-index: 9999;
         }
         .bottom-nav-actions.nav-shrunk { transform: translateX(-50%) scale(.88); opacity: .88; }
+        #codeCheckPage.ecs-inline-search-active .bottom-nav-actions {
+            transform: translateX(-50%) translateY(calc(100% + 24px)) scale(.96);
+            opacity: 0;
+            pointer-events: none;
+        }
         .bottom-nav-btn {
             min-width: 0;
             min-height: 54px;
@@ -3188,7 +3193,7 @@ Room Codes (Room- Codes)
                                 <button id="addEcsDropdownList" class="dropdown-editor-btn add" style="width:auto;padding:8px 16px;">+ Add New List</button>
                             </div>
                             <p style="font-size:0.9rem;color:#666;margin-bottom:15px;">
-                                Each list becomes a dropdown column on every ECS row. At least one list must remain. The first list is the primary Status column.
+                                Each list becomes a column on every ECS row. Drag lists to change their display order; Status and Comment keep their assigned behavior.
                             </p>
                             <div id="ecsDropdownListsContainer"></div>
                         </div>
@@ -4060,6 +4065,8 @@ rooms: [],
             customCommentOptions: [],
             // ecsDropdownLists: array of {id, name, options[]} — drives extra columns in ECS rows
             ecsDropdownLists: [],
+            // v1 stored Status/Comment by array position; v2 stores a stable role on each list.
+            ecsListRoleVersion: 1,
             // ecsExtraData: { listId: { uniqueCodeId: selectedValue } }
             ecsExtraData: {},
             assetTagz2: {
@@ -4096,6 +4103,7 @@ rooms: [],
                 customStatusOptions: [],
                 customCommentOptions: [],
                 ecsDropdownLists: [],
+                ecsListRoleVersion: 1,
                 ecsExtraData: {},
                 ecsQuickEntryMode: false,
                 ecsQuickEntryState: {},
@@ -4162,16 +4170,46 @@ rooms: [],
             'Unable To Verify'
         ];
 
-        // Get current status options (custom or default)
-        function getCodeStatusOptions() {
-            const lists = getEcsDropdownLists();
-            return lists[0] ? lists[0].options : defaultCodeStatusOptions;
+        function getEcsListByRole(role) {
+            return getEcsDropdownLists().find(list => list.role === role) || null;
         }
 
-        // Get current comment options (derived from second dropdown list)
+        function getStatusList() {
+            return getEcsListByRole('status');
+        }
+
+        function getCommentList() {
+            return getEcsListByRole('comment');
+        }
+
+        function getEcsExtraLists() {
+            return getEcsDropdownLists().filter(list => list.role === 'extra');
+        }
+
+        function getStatusListName() {
+            const list = getStatusList();
+            return list && list.name ? list.name : 'Status';
+        }
+
+        function getCommentListName() {
+            const list = getCommentList();
+            return list && list.name ? list.name : 'Comment';
+        }
+
+        function getStatusPrompt() {
+            return `Select ${getStatusListName()}...`;
+        }
+
+        // Get current status options from the stable Status role.
+        function getCodeStatusOptions() {
+            const list = getStatusList();
+            return list ? list.options : defaultCodeStatusOptions;
+        }
+
+        // Get current comment options from the stable Comment role.
         function getCommentOptions() {
-            const lists = getEcsDropdownLists();
-            return lists[1] ? lists[1].options : defaultCommentOptions;
+            const list = getCommentList();
+            return list ? list.options : defaultCommentOptions;
         }
 
         // Returns true if the user has a Comment dropdown list defined.
@@ -4182,19 +4220,11 @@ rooms: [],
         //   • generateCodeCheckItems        (ECS check page, list view)
         //   • buildConfirmedRow             (ECS check page, Quick Entry view)
         function hasCommentList() {
-            const lists = getEcsDropdownLists();
-            return !!(lists && lists[1]);
+            return !!getCommentList();
         }
 
-        // Returns the Comment list object (lists[1]) so build sites can read
-        // its .name (used as the column label) and .type ('select' or 'text').
-        // Callers must guard with hasCommentList() first.
-        function getCommentList() {
-            return getEcsDropdownLists()[1];
-        }
-
-        // Renders the "extra" dropdown list columns (lists[2], lists[3], …)
-        // for a single ECS code row, and appends them to controlsRow.
+        // Renders every configured list for a single ECS code row and appends
+        // it to controlsRow in visual order.
         //
         // Used by both the List view (generateCodeCheckItems) and the
         // Search/Quick Entry view (buildConfirmedRow). Without this shared
@@ -4209,12 +4239,20 @@ rooms: [],
         //   data-role="extra-btn-${list.id}"      (dropdown button)
         //   data-role="extra-options-${list.id}"  (dropdown options panel)
         //   data-role="extra-text" + data-list-id + data-code-id (text input)
-        function appendEcsExtraListColumns(controlsRow, uniqueCodeId) {
+        function appendEcsExtraListColumns(controlsRow, uniqueCodeId, roleControls = {}) {
             const allLists = getEcsDropdownLists();
-            if (allLists.length <= 2) return;
 
             if (!appState.ecsExtraData) appState.ecsExtraData = {};
-            allLists.slice(2).forEach(list => {
+            allLists.forEach(list => {
+                if (list.role === 'status') {
+                    if (roleControls.status) controlsRow.appendChild(roleControls.status);
+                    return;
+                }
+                if (list.role === 'comment') {
+                    if (roleControls.comment) controlsRow.appendChild(roleControls.comment);
+                    return;
+                }
+
                 if (!appState.ecsExtraData[list.id]) appState.ecsExtraData[list.id] = {};
                 const extraWrapper = document.createElement('div');
                 extraWrapper.className = 'control-wrapper';
@@ -4503,7 +4541,9 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('addEcsDropdownList').addEventListener('click', function() {
                 const lists = getEcsDropdownLists();
                 const newId = 'list-extra-' + Date.now();
-                lists.push({ id: newId, name: 'New List', type: 'select', options: ['Option 1'] });
+                const role = !lists.some(list => list.role === 'status') ? 'status' :
+                    (!lists.some(list => list.role === 'comment') ? 'comment' : 'extra');
+                lists.push({ id: newId, role, name: 'New List', type: 'select', options: ['Option 1'] });
                 if (!appState.ecsExtraData) appState.ecsExtraData = {};
                 appState.ecsExtraData[newId] = {};
                 saveDataToStorage();
@@ -4679,8 +4719,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
 
         // Dropdown Editor Functions
         // ── ECS Dropdown List Management ──────────────────────────────────────
-        // appState.ecsDropdownLists = [ {id, name, options:[]} , ... ]
-        // The first list is the "Status" column; additional lists add extra columns.
+        // appState.ecsDropdownLists = [ {id, role, name, type, options:[]} , ... ]
+        // Status and Comment behavior follows role; array order controls visual order.
         // appState.ecsExtraData = { listId: { uniqueCodeId: value } }
 
 
@@ -4696,11 +4736,148 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 const commentOpts = (Array.isArray(appState.customCommentOptions) && appState.customCommentOptions.length)
                     ? appState.customCommentOptions : [...defaultCommentOptions];
                 appState.ecsDropdownLists = [
-                    { id: 'list-status',  name: 'Status',  type: 'select', options: statusOpts  },
-                    { id: 'list-comment', name: 'Comment', type: 'select', options: commentOpts }
+                    { id: 'list-status',  role: 'status',  name: 'Status',  type: 'select', options: statusOpts  },
+                    { id: 'list-comment', role: 'comment', name: 'Comment', type: 'select', options: commentOpts }
                 ];
             }
+            normalizeEcsListRoles(appState.ecsDropdownLists, false);
             return appState.ecsDropdownLists;
+        }
+
+        function normalizeEcsListRoles(lists, useLegacyPositions) {
+            if (!Array.isArray(lists)) return;
+
+            lists.forEach(list => {
+                if (!list || typeof list !== 'object') return;
+                if (!Array.isArray(list.options)) list.options = [];
+                if (!list.type) list.type = 'select';
+                if (typeof list.name !== 'string') list.name = 'New List';
+            });
+
+            const statusList = lists.find(list => list.id === 'list-status') ||
+                lists.find(list => list.role === 'status') ||
+                (useLegacyPositions ? lists[0] : null);
+            const commentList = lists.find(list => list.id === 'list-comment') ||
+                lists.find(list => list.role === 'comment') ||
+                (useLegacyPositions ? lists.find((list, index) => index === 1 && list !== statusList) : null);
+
+            lists.forEach(list => { list.role = 'extra'; });
+            if (statusList) {
+                statusList.role = 'status';
+                statusList.type = 'select';
+            }
+            if (commentList && commentList !== statusList) commentList.role = 'comment';
+        }
+
+        function getEcsCodeIds(roomCodes) {
+            const ids = [];
+            Object.entries(roomCodes || {}).forEach(([room, codes]) => {
+                (codes || []).forEach(code => ids.push(`${room}-${code}`));
+            });
+            return ids;
+        }
+
+        function migrateLegacyEcsListStorage(lists) {
+            if (!Array.isArray(lists) || lists.length === 0) return;
+
+            const oldStatuses = { ...(appState.checkData || {}) };
+            const oldComments = { ...(appState.codeSpecificComments || {}) };
+            const oldExtras = {};
+            lists.forEach(list => {
+                oldExtras[list.id] = { ...((appState.ecsExtraData || {})[list.id] || {}) };
+                if (!appState.ecsExtraData[list.id]) appState.ecsExtraData[list.id] = {};
+            });
+
+            getEcsCodeIds(appState.roomCodes).forEach(codeId => {
+                const valuesByListId = {};
+                lists.forEach((list, index) => {
+                    if (index === 0) {
+                        const optionIndex = oldStatuses[codeId];
+                        valuesByListId[list.id] = Number.isInteger(optionIndex) ? (list.options[optionIndex] || '') : '';
+                    } else if (index === 1) {
+                        valuesByListId[list.id] = oldComments[codeId] || '';
+                    } else {
+                        valuesByListId[list.id] = oldExtras[list.id][codeId] || '';
+                    }
+                });
+
+                appState.checkData[codeId] = null;
+                appState.codeSpecificComments[codeId] = '';
+                lists.forEach(list => { delete appState.ecsExtraData[list.id][codeId]; });
+
+                lists.forEach(list => {
+                    const value = valuesByListId[list.id] || '';
+                    if (list.role === 'status') {
+                        const optionIndex = list.options.indexOf(value);
+                        appState.checkData[codeId] = optionIndex >= 0 ? optionIndex : null;
+                    } else if (list.role === 'comment') {
+                        appState.codeSpecificComments[codeId] = value;
+                    } else if (value) {
+                        appState.ecsExtraData[list.id][codeId] = value;
+                    }
+                });
+            });
+
+            const at = appState.assetTagz2 || {};
+            const oldAtStatuses = { ...(at.statusByCodeId || {}) };
+            const oldAtComments = { ...(at.commentsByCodeId || {}) };
+            getEcsCodeIds(at.roomCodes).forEach(codeId => {
+                const valuesByListId = {};
+                if (lists[0]) {
+                    const optionIndex = oldAtStatuses[codeId];
+                    valuesByListId[lists[0].id] = Number.isInteger(optionIndex) ? (lists[0].options[optionIndex] || '') : '';
+                }
+                if (lists[1]) valuesByListId[lists[1].id] = oldAtComments[codeId] || '';
+
+                at.statusByCodeId[codeId] = null;
+                at.commentsByCodeId[codeId] = '';
+                lists.slice(0, 2).forEach(list => {
+                    const value = valuesByListId[list.id] || '';
+                    if (list.role === 'status') {
+                        const optionIndex = list.options.indexOf(value);
+                        at.statusByCodeId[codeId] = optionIndex >= 0 ? optionIndex : null;
+                    } else if (list.role === 'comment') {
+                        at.commentsByCodeId[codeId] = value;
+                    }
+                });
+            });
+        }
+
+        function updateStoredStatusIndexes(mapper) {
+            getEcsCodeIds(appState.roomCodes).forEach(codeId => {
+                const current = appState.checkData[codeId];
+                if (Number.isInteger(current)) appState.checkData[codeId] = mapper(current);
+            });
+
+            const at = appState.assetTagz2 || {};
+            Object.keys(at.statusByCodeId || {}).forEach(codeId => {
+                const current = at.statusByCodeId[codeId];
+                if (Number.isInteger(current)) at.statusByCodeId[codeId] = mapper(current);
+            });
+        }
+
+        function remapStatusIndexForMove(current, fromIndex, toIndex) {
+            if (current === fromIndex) return toIndex;
+            if (fromIndex < toIndex && current > fromIndex && current <= toIndex) return current - 1;
+            if (fromIndex > toIndex && current >= toIndex && current < fromIndex) return current + 1;
+            return current;
+        }
+
+        function remapStatusIndexForRemoval(current, removedIndex) {
+            if (current === removedIndex) return null;
+            return current > removedIndex ? current - 1 : current;
+        }
+
+        function clearEcsRoleData(role) {
+            if (role === 'status') {
+                getEcsCodeIds(appState.roomCodes).forEach(codeId => { appState.checkData[codeId] = null; });
+                const at = appState.assetTagz2 || {};
+                Object.keys(at.statusByCodeId || {}).forEach(codeId => { at.statusByCodeId[codeId] = null; });
+            } else if (role === 'comment') {
+                getEcsCodeIds(appState.roomCodes).forEach(codeId => { appState.codeSpecificComments[codeId] = ''; });
+                const at = appState.assetTagz2 || {};
+                Object.keys(at.commentsByCodeId || {}).forEach(codeId => { at.commentsByCodeId[codeId] = ''; });
+            }
         }
 
         // Render the full editor: one collapsible card per list + add/delete list controls
@@ -4798,6 +4975,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 typeCheckbox.type = 'checkbox';
                 typeCheckbox.style.cssText = 'position:absolute;opacity:0;width:0;height:0;';
                 typeCheckbox.checked = (list.type === 'text');
+                typeCheckbox.disabled = list.role === 'status';
+                if (list.role === 'status') typeToggle.title = 'Status must remain a dropdown';
 
                 const typeTrack = document.createElement('span');
                 typeTrack.className = 'ecs-ios-toggle-track';
@@ -4826,7 +5005,12 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                         return;
                     }
                     appState.ecsDropdownLists.splice(listIdx, 1);
-                    if (appState.ecsExtraData) delete appState.ecsExtraData[list.id];
+                    if (list.role === 'extra') {
+                        if (appState.ecsExtraData) delete appState.ecsExtraData[list.id];
+                    } else {
+                        clearEcsRoleData(list.role);
+                        if (appState.ecsExtraData) delete appState.ecsExtraData[list.id];
+                    }
                     saveDataToStorage();
                     renderEcsDropdownListsEditor();
                 });
@@ -4882,6 +5066,9 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                             const fromOpt = dragSrcOptIdx;
                             const toOpt   = optIdx;
                             if (fromOpt === null || fromOpt === toOpt) return;
+                            if (list.role === 'status') {
+                                updateStoredStatusIndexes(current => remapStatusIndexForMove(current, fromOpt, toOpt));
+                            }
                             const moved = list.options.splice(fromOpt, 1)[0];
                             list.options.splice(toOpt, 0, moved);
                             saveDataToStorage();
@@ -4917,6 +5104,9 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                             if (list.options.length <= 1) {
                                 showMessageModal('Cannot Remove', 'At least one option must remain in each list.');
                                 return;
+                            }
+                            if (list.role === 'status') {
+                                updateStoredStatusIndexes(current => remapStatusIndexForRemoval(current, optIdx));
                             }
                             list.options.splice(optIdx, 1);
                             saveDataToStorage();
@@ -4992,14 +5182,16 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     el.appendChild(item);
                 });
                 el.querySelectorAll('.dropdown-editor-input[data-list="status"]').forEach(inp => inp.addEventListener('input', e => {
-                    const lists = getEcsDropdownLists();
-                    if (lists[0]) { lists[0].options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
+                    const list = getStatusList();
+                    if (list) { list.options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
                 }));
                 el.querySelectorAll('.dropdown-editor-btn.remove[data-list="status"]').forEach(btn => btn.addEventListener('click', e => {
-                    const lists = getEcsDropdownLists();
-                    if (!lists[0]) return;
-                    if (lists[0].options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
-                    lists[0].options.splice(parseInt(e.target.dataset.index), 1);
+                    const list = getStatusList();
+                    if (!list) return;
+                    if (list.options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
+                    const removedIndex = parseInt(e.target.dataset.index);
+                    updateStoredStatusIndexes(current => remapStatusIndexForRemoval(current, removedIndex));
+                    list.options.splice(removedIndex, 1);
                     saveDataToStorage();
                     renderDropdownEditor(elementId);
                 }));
@@ -5025,14 +5217,14 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     el.appendChild(item);
                 });
                 el.querySelectorAll('.dropdown-editor-input[data-list="comment"]').forEach(inp => inp.addEventListener('input', e => {
-                    const lists = getEcsDropdownLists();
-                    if (lists[1]) { lists[1].options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
+                    const list = getCommentList();
+                    if (list) { list.options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
                 }));
                 el.querySelectorAll('.dropdown-editor-btn.remove-comment[data-list="comment"]').forEach(btn => btn.addEventListener('click', e => {
-                    const lists = getEcsDropdownLists();
-                    if (!lists[1]) return;
-                    if (lists[1].options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
-                    lists[1].options.splice(parseInt(e.target.dataset.index), 1);
+                    const list = getCommentList();
+                    if (!list) return;
+                    if (list.options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
+                    list.options.splice(parseInt(e.target.dataset.index), 1);
                     saveDataToStorage();
                     renderCommentDropdownEditor(elementId);
                 }));
@@ -5046,12 +5238,12 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
         // ============================================================================
 
         function addDropdownOption() {
-            const lists = getEcsDropdownLists();
-            if (lists[0]) { lists[0].options.push('New Option'); saveDataToStorage(); renderEcsDropdownListsEditor(); renderDropdownEditor('assetTagz2DropdownEditorList'); }
+            const list = getStatusList();
+            if (list) { list.options.push('New Option'); saveDataToStorage(); renderEcsDropdownListsEditor(); renderDropdownEditor('assetTagz2DropdownEditorList'); }
         }
         function addCommentDropdownOption() {
-            const lists = getEcsDropdownLists();
-            if (lists[1]) { lists[1].options.push('New Comment'); saveDataToStorage(); renderCommentDropdownEditor('assetTagz2CommentDropdownEditorList'); }
+            const list = getCommentList();
+            if (list) { list.options.push('New Comment'); saveDataToStorage(); renderCommentDropdownEditor('assetTagz2CommentDropdownEditorList'); }
         }
 
 
@@ -5280,7 +5472,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             } catch (error) {
                 console.error('Failed to load data:', error);
             } finally {
-                normalizeAppState();
+                if (normalizeAppState()) saveDataToStorage();
             }
         }
 
@@ -5289,6 +5481,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
          * This is important because imported / saved JSON may miss nested defaults.
          */
         function normalizeAppState() {
+            let migratedEcsRoles = false;
             // Ensure top-level containers exist
             appState = appState || {};
             appState.rooms = Array.isArray(appState.rooms) ? appState.rooms : [];
@@ -5304,8 +5497,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             appState.customStatusOptions = Array.isArray(appState.customStatusOptions) ? appState.customStatusOptions : [];
             appState.customCommentOptions = Array.isArray(appState.customCommentOptions) ? appState.customCommentOptions : [];
             if (!Array.isArray(appState.ecsDropdownLists)) appState.ecsDropdownLists = [];
-            // Ensure every list has a type field (backwards compat with saves before type was added)
-            appState.ecsDropdownLists.forEach(l => { if (!l.type) l.type = 'select'; });
+            const legacyEcsRoles = !Number.isInteger(appState.ecsListRoleVersion) || appState.ecsListRoleVersion < 2;
+            normalizeEcsListRoles(appState.ecsDropdownLists, legacyEcsRoles);
             if (!appState.ecsExtraData || typeof appState.ecsExtraData !== 'object') appState.ecsExtraData = {};
             if (typeof appState.ecsQuickEntryMode !== 'boolean') appState.ecsQuickEntryMode = false;
             if (!appState.ecsQuickEntryState || typeof appState.ecsQuickEntryState !== 'object') appState.ecsQuickEntryState = {};
@@ -5322,6 +5515,12 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             at.barcodePool = Array.isArray(at.barcodePool) ? at.barcodePool : null;
             at.barcodePoolTotal = (typeof at.barcodePoolTotal === 'number') ? at.barcodePoolTotal : (at.barcodePresets.length || 0);
 
+            if (legacyEcsRoles) {
+                migrateLegacyEcsListStorage(appState.ecsDropdownLists);
+                appState.ecsListRoleVersion = 2;
+                migratedEcsRoles = true;
+            }
+
             // Flexible tracking nested defaults (if present)
             if (appState.flexibleInspections && typeof appState.flexibleInspections === 'object') {
                 const flex = appState.flexibleInspections;
@@ -5332,6 +5531,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 flex.locks = (flex.locks && typeof flex.locks === 'object') ? flex.locks : {};
                 flex.ecsPresets = Array.isArray(flex.ecsPresets) ? flex.ecsPresets : [];
             }
+            return migratedEcsRoles;
         }
 
         function refreshUIFromState() {
@@ -6151,12 +6351,12 @@ if (presets.length) {
 
                 const statusLabel = document.createElement('div');
                 statusLabel.className = 'control-label';
-                statusLabel.textContent = 'Status';
+                statusLabel.textContent = getStatusListName();
                 statusWrapper.appendChild(statusLabel);
 
                 const statusButton = document.createElement('button');
                 statusButton.className = 'status-button';
-                statusButton.textContent = 'Select Status';
+                statusButton.textContent = getStatusPrompt();
                 statusButton.dataset.codeId = codeId;
                 statusButton.addEventListener('click', toggleAssetTagz2StatusOptions);
                 statusWrapper.appendChild(statusButton);
@@ -6179,7 +6379,6 @@ if (presets.length) {
                 });
 
                 statusWrapper.appendChild(statusOptions);
-                controlsRow.appendChild(statusWrapper);
 
                 // Comment column — only built when the user has a Comment
                 // dropdown list defined in the editor. If they deleted it,
@@ -6190,13 +6389,14 @@ if (presets.length) {
                 //   • 'select' (default) → dropdown with options + Custom… + textarea
                 //   • 'text'             → plain text input (no dropdown)
                 // Storage is unchanged either way (appState.assetTagz2.commentsByCodeId).
+                let commentWrapper = null;
                 if (hasCommentList()) {
                     const commentList = getCommentList();
                     const commentLabelText = commentList.name || 'Comment';
                     const commentIsText = commentList.type === 'text';
 
                     // Comment wrapper — button+options style matching ECS
-                    const commentWrapper = document.createElement('div');
+                    commentWrapper = document.createElement('div');
                     commentWrapper.className = 'control-wrapper comment-section';
                     commentWrapper.style.position = 'relative';
 
@@ -6272,8 +6472,12 @@ if (presets.length) {
 
                         commentWrapper.appendChild(customInput);
                     }
-                    controlsRow.appendChild(commentWrapper);
                 }
+
+                getEcsDropdownLists().forEach(list => {
+                    if (list.role === 'status') controlsRow.appendChild(statusWrapper);
+                    if (list.role === 'comment' && commentWrapper) controlsRow.appendChild(commentWrapper);
+                });
 
                 // Barcode wrapper (NEW) - to the right of Comment
                 const barcodeWrapper = document.createElement('div');
@@ -6351,14 +6555,14 @@ barcodeWrapper.appendChild(barcodeInput);
             const statusIndex = event.target.dataset.statusIndex;
             const statusText = event.target.textContent;
 
-            const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button[data-code-id="${codeId}"]`);
+            const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button:not([data-role])[data-code-id="${codeId}"]`);
             const statusOptions = event.target.closest('.status-options');
 
             if (statusIndex === '__clear__') {
                 // Clear the selection
                 at.statusByCodeId[codeId] = null;
                 if (statusButton) {
-                    statusButton.textContent = 'Select Status';
+                    statusButton.textContent = getStatusPrompt();
                     statusButton.classList.remove('selected');
                 }
                 if (statusOptions) statusOptions.classList.remove('active');
@@ -6459,13 +6663,13 @@ barcodeWrapper.appendChild(barcodeInput);
                 const barcode = at.barcodesByCodeId[codeId] || '';
 
                 // Restore status button
-                const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button[data-code-id="${codeId}"]`);
+                const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button:not([data-role])[data-code-id="${codeId}"]`);
                 if (statusButton) {
                     if (statusIndex !== null && statusIndex !== undefined) {
                         statusButton.textContent = codeStatusOptions[statusIndex];
                         statusButton.classList.add('selected');
                     } else {
-                        statusButton.textContent = 'Select Status';
+                        statusButton.textContent = getStatusPrompt();
                         statusButton.classList.remove('selected');
                     }
                 }
@@ -6540,7 +6744,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 const at = appState.assetTagz2 || {};
                 const rc = at.roomCodes || {};
                 const codeStatusOptions = getCodeStatusOptions();
-                let csvContent = 'Room,Code,Status,Comment,Barcode\n';
+                let csvContent = `Room,Code,"${getStatusListName().replace(/"/g, '""')}","${getCommentListName().replace(/"/g, '""')}",Barcode\n`;
 
                 for (const room in rc) {
                     (rc[room] || []).forEach(code => {
@@ -6695,12 +6899,12 @@ barcodeWrapper.appendChild(barcodeInput);
                 
                 const statusLabel = document.createElement('div');
                 statusLabel.className = 'control-label';
-                statusLabel.textContent = 'Status';
+                statusLabel.textContent = getStatusListName();
                 statusWrapper.appendChild(statusLabel);
 
                 const statusButton = document.createElement('button');
                 statusButton.className = 'status-button';
-                statusButton.textContent = 'Select Status';
+                statusButton.textContent = getStatusPrompt();
                 statusButton.dataset.codeId = uniqueCodeId;
                 statusButton.addEventListener('click', toggleStatusOptions);
                 statusWrapper.appendChild(statusButton);
@@ -6723,7 +6927,6 @@ barcodeWrapper.appendChild(barcodeInput);
                 });
                 
                 statusWrapper.appendChild(statusOptions);
-                controlsRow.appendChild(statusWrapper);
 
                 // Comment column — only built when the user has a Comment
                 // dropdown list defined in the editor. If they deleted it,
@@ -6734,13 +6937,14 @@ barcodeWrapper.appendChild(barcodeInput);
                 //   • 'select' (default) → dropdown with options + Custom… + textarea
                 //   • 'text'             → plain text input (no dropdown)
                 // Storage is unchanged either way (appState.codeSpecificComments).
+                let commentWrapper = null;
                 if (hasCommentList()) {
                     const commentList = getCommentList();
                     const commentLabelText = commentList.name || 'Comment';
                     const commentIsText = commentList.type === 'text';
 
                     // Comment wrapper — styled identically to the Status button
-                    const commentWrapper = document.createElement('div');
+                    commentWrapper = document.createElement('div');
                     commentWrapper.className = 'control-wrapper comment-section';
                     commentWrapper.style.position = 'relative';
 
@@ -6820,12 +7024,14 @@ barcodeWrapper.appendChild(barcodeInput);
 
                         commentWrapper.appendChild(customInput);
                     }
-                    controlsRow.appendChild(commentWrapper);
                 }
 
-                // ── Extra dropdown lists (lists[2], lists[3], …) ──────────────
-                // Shared with buildConfirmedRow (Search/Quick Entry view)
-                appendEcsExtraListColumns(controlsRow, uniqueCodeId);
+                // Append every configured list in its visual editor order.
+                // Shared with buildConfirmedRow (Search/Quick Entry view).
+                appendEcsExtraListColumns(controlsRow, uniqueCodeId, {
+                    status: statusWrapper,
+                    comment: commentWrapper
+                });
 
                 controlsCell.appendChild(controlsRow);
                 rowDiv.appendChild(controlsCell);
@@ -6979,17 +7185,17 @@ barcodeWrapper.appendChild(barcodeInput);
 
             const statusLabel = document.createElement('div');
             statusLabel.className = 'control-label';
-            statusLabel.textContent = 'Status';
+            statusLabel.textContent = getStatusListName();
             statusWrapper.appendChild(statusLabel);
 
             const statusButton = document.createElement('button');
             statusButton.className = 'status-button';
             statusButton.dataset.codeId = uniqueCodeId;
             if (savedStatusIndex !== null && savedStatusIndex !== undefined) {
-                statusButton.textContent = codeStatusOptions[savedStatusIndex] || 'Select Status';
+                statusButton.textContent = codeStatusOptions[savedStatusIndex] || getStatusPrompt();
                 statusButton.classList.add('selected');
             } else {
-                statusButton.textContent = 'Select Status';
+                statusButton.textContent = getStatusPrompt();
             }
             statusButton.addEventListener('click', toggleStatusOptions);
             statusWrapper.appendChild(statusButton);
@@ -7009,7 +7215,6 @@ barcodeWrapper.appendChild(barcodeInput);
                 statusOptionsDiv.appendChild(opt);
             });
             statusWrapper.appendChild(statusOptionsDiv);
-            controlsRow.appendChild(statusWrapper);
 
             // Comment column — only built when the user has a Comment
             // dropdown list defined in the editor. If they deleted it,
@@ -7021,12 +7226,13 @@ barcodeWrapper.appendChild(barcodeInput);
             //                          (preserves "saved choice" / "Custom…" state)
             //   • 'text'             → plain text input pre-filled with savedComment
             // Storage is unchanged either way (appState.codeSpecificComments).
+            let commentWrapper = null;
             if (hasCommentList()) {
                 const commentList = getCommentList();
                 const commentLabelText = commentList.name || 'Comment';
                 const commentIsText = commentList.type === 'text';
 
-                const commentWrapper = document.createElement('div');
+                commentWrapper = document.createElement('div');
                 commentWrapper.className = 'control-wrapper comment-section';
                 commentWrapper.style.position = 'relative';
 
@@ -7115,14 +7321,14 @@ barcodeWrapper.appendChild(barcodeInput);
 
                     commentWrapper.appendChild(customInput);
                 }
-                controlsRow.appendChild(commentWrapper);
             }
 
-            // ── Extra dropdown lists (lists[2], lists[3], …) ──────────────
-            // Shared with generateCodeCheckItems (List view). Without this
-            // call the Search/Quick Entry view did not show user-defined
-            // extra lists at all.
-            appendEcsExtraListColumns(controlsRow, uniqueCodeId);
+            // Shared with generateCodeCheckItems (List view), including
+            // user-defined extra lists.
+            appendEcsExtraListColumns(controlsRow, uniqueCodeId, {
+                status: statusWrapper,
+                comment: commentWrapper
+            });
 
             row.appendChild(controlsRow);
 
@@ -7170,6 +7376,12 @@ barcodeWrapper.appendChild(barcodeInput);
             const suggestions = document.createElement('div');
             suggestions.className = 'ecs-suggestions';
 
+            function setSuggestionsOpen(open) {
+                suggestions.classList.toggle('open', open);
+                const codeCheckPage = document.getElementById('codeCheckPage');
+                if (codeCheckPage) codeCheckPage.classList.toggle('ecs-inline-search-active', open);
+            }
+
             searchWrap.appendChild(input);
             searchWrap.appendChild(clearBtn);
             searchWrap.appendChild(suggestions);
@@ -7190,7 +7402,7 @@ barcodeWrapper.appendChild(barcodeInput);
                     : available;
 
                 if (matches.length === 0) {
-                    suggestions.classList.remove('open');
+                    setSuggestionsOpen(false);
                     return;
                 }
 
@@ -7220,7 +7432,7 @@ barcodeWrapper.appendChild(barcodeInput);
                     suggestions.appendChild(item);
                 });
 
-                suggestions.classList.add('open');
+                setSuggestionsOpen(true);
             }
 
             function escapeHtml(str) {
@@ -7284,7 +7496,7 @@ barcodeWrapper.appendChild(barcodeInput);
             input.addEventListener('blur', () => {
                 // Delay so mousedown on suggestion fires before blur closes the list
                 setTimeout(() => {
-                    suggestions.classList.remove('open');
+                    setSuggestionsOpen(false);
                 }, 150);
             });
 
@@ -7303,7 +7515,7 @@ barcodeWrapper.appendChild(barcodeInput);
                         else input.classList.add('no-match');
                     }
                 } else if (e.key === 'Escape') {
-                    suggestions.classList.remove('open');
+                    setSuggestionsOpen(false);
                 }
             });
 
@@ -7311,14 +7523,14 @@ barcodeWrapper.appendChild(barcodeInput);
                 input.value = '';
                 clearBtn.classList.remove('visible');
                 input.classList.remove('matched', 'no-match');
-                suggestions.classList.remove('open');
+                setSuggestionsOpen(false);
                 input.focus();
             });
 
             // Close suggestions on outside click — remove listener when suggestions close
             const closeSugg = (e) => {
                 if (!row.contains(e.target)) {
-                    suggestions.classList.remove('open');
+                    setSuggestionsOpen(false);
                     document.removeEventListener('click', closeSugg);
                 }
             };
@@ -7326,6 +7538,7 @@ barcodeWrapper.appendChild(barcodeInput);
             // Also remove if the row itself is removed from the DOM (re-render)
             const observer = new MutationObserver(() => {
                 if (!document.body.contains(row)) {
+                    setSuggestionsOpen(false);
                     document.removeEventListener('click', closeSugg);
                     observer.disconnect();
                 }
@@ -7403,7 +7616,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 // Clear the selection
                 appState.checkData[codeId] = null;
                 if (statusButton) {
-                    statusButton.textContent = 'Select Status';
+                    statusButton.textContent = getStatusPrompt();
                     statusButton.classList.remove('selected');
                 }
                 // Remove camera button if no status AND no comment remain
@@ -7627,8 +7840,7 @@ barcodeWrapper.appendChild(barcodeInput);
             const codesForCurrentRoom = appState.roomCodes[currentRoomName] || [];
             const codeStatusOptions = getCodeStatusOptions();
             const commentOptions = getCommentOptions();
-            const allLists = getEcsDropdownLists();
-            const extraLists = allLists.slice(2);
+            const extraLists = getEcsExtraLists();
 
             codesForCurrentRoom.forEach(code => {
                 const uniqueCodeId = `${currentRoomName}-${code}`;
@@ -7636,13 +7848,13 @@ barcodeWrapper.appendChild(barcodeInput);
                 const comment = appState.codeSpecificComments[uniqueCodeId] || '';
 
                 // Update status button
-                const statusButton = document.querySelector(`.status-button[data-code-id="${uniqueCodeId}"]`);
+                const statusButton = document.querySelector(`.status-button:not([data-role])[data-code-id="${uniqueCodeId}"]`);
                 if (statusButton) {
                     if (statusIndex !== null && statusIndex !== undefined) {
                         statusButton.textContent = codeStatusOptions[statusIndex];
                         statusButton.classList.add('selected');
                     } else {
-                        statusButton.textContent = 'Select Status';
+                        statusButton.textContent = getStatusPrompt();
                         statusButton.classList.remove('selected');
                     }
                 }
@@ -8280,27 +8492,24 @@ barcodeWrapper.appendChild(barcodeInput);
 
         function exportCodeToCsv() {
             try {
-                const codeStatusOptions = getCodeStatusOptions();
                 const allLists = getEcsDropdownLists();
-                const extraLists = allLists.slice(2);
-                const extraHeaders = extraLists.map(l => '"' + l.name.replace(/"/g, '""') + '"').join(',');
-                let csvContent = 'Room,Code,Status,Comment' + (extraHeaders ? ',' + extraHeaders : '') + ',Room_Status\n';
+                const csvCell = value => '"' + String(value || '').replace(/"/g, '""') + '"';
+                const listHeaders = allLists.map(list => csvCell(list.name)).join(',');
+                let csvContent = 'Room,Code' + (listHeaders ? ',' + listHeaders : '') + ',Room_Status\n';
 
                 for (const room in appState.roomCodes) {
                     appState.roomCodes[room].forEach(code => {
                         const uniqueCodeId = `${room}-${code}`;
-                        const statusIndex = appState.checkData[uniqueCodeId];
-                        const status = (statusIndex !== null && statusIndex !== undefined) ? codeStatusOptions[statusIndex] : '';
-                        const comment = appState.codeSpecificComments[uniqueCodeId] || '';
                         const room_status = appState.roomStatus[room] || '';
-                        let extraVals = '';
-                        if (extraLists.length) {
-                            extraVals = ',' + extraLists.map(l => {
-                                const val = (appState.ecsExtraData && appState.ecsExtraData[l.id] && appState.ecsExtraData[l.id][uniqueCodeId]) || '';
-                                return '"' + val.replace(/"/g, '""') + '"';
-                            }).join(',');
-                        }
-                        csvContent += '"' + room + '","' + code + '","' + status + '","' + comment.replace(/"/g, '""') + '"' + extraVals + ',"' + room_status + '"\n';
+                        const values = allLists.map(list => {
+                            if (list.role === 'status') {
+                                const statusIndex = appState.checkData[uniqueCodeId];
+                                return Number.isInteger(statusIndex) ? (list.options[statusIndex] || '') : '';
+                            }
+                            if (list.role === 'comment') return appState.codeSpecificComments[uniqueCodeId] || '';
+                            return (appState.ecsExtraData && appState.ecsExtraData[list.id] && appState.ecsExtraData[list.id][uniqueCodeId]) || '';
+                        });
+                        csvContent += [room, code, ...values, room_status].map(csvCell).join(',') + '\n';
                     });
                 }
 
@@ -8396,6 +8605,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 appState.codeSpecificComments   = clean.codeSpecificComments;
                 appState.ecsExtraData           = clean.ecsExtraData;
                 appState.ecsDropdownLists       = clean.ecsDropdownLists;
+                appState.ecsListRoleVersion     = clean.ecsListRoleVersion;
                 appState.customStatusOptions    = clean.customStatusOptions;
                 appState.customCommentOptions   = clean.customCommentOptions;
                 appState.ecsQuickEntryMode      = clean.ecsQuickEntryMode;
@@ -8585,6 +8795,7 @@ barcodeWrapper.appendChild(barcodeInput);
             if (state.customStatusOptions  && state.customStatusOptions.length)  m.cso = state.customStatusOptions;
             if (state.customCommentOptions && state.customCommentOptions.length) m.cco = state.customCommentOptions;
             if (state.ecsDropdownLists     && state.ecsDropdownLists.length)     m.edl = state.ecsDropdownLists;
+            m.elv = state.ecsListRoleVersion || 1;
             if (state.ecsExtraData         && Object.keys(state.ecsExtraData || {}).length) m.eed = state.ecsExtraData;
             if (state.ecsQuickEntryMode)                                          m.qe  = 1;
             if (state.ecsQuickEntryState && Object.keys(state.ecsQuickEntryState || {}).length) m.qes = state.ecsQuickEntryState;
@@ -8651,6 +8862,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 customStatusOptions:    m.cso || [],
                 customCommentOptions:   m.cco || [],
                 ecsDropdownLists:       m.edl || [],
+                ecsListRoleVersion:     m.elv || 1,
                 ecsExtraData:           m.eed || {},
                 ecsQuickEntryMode:      !!m.qe,
                 ecsQuickEntryState:     m.qes || {},
@@ -10144,11 +10356,10 @@ function renderFlexBarcodeRows() {
                 const commentText = (appState.codeSpecificComments && appState.codeSpecificComments[uniqueCodeId])
                     ? appState.codeSpecificComments[uniqueCodeId] : '';
 
-                // Collect extra list values (lists[2], lists[3], …)
+                // Collect extra list values in their visual order.
                 const extraFields = [];
-                if (typeof getEcsDropdownLists === 'function') {
-                    const allLists = getEcsDropdownLists();
-                    allLists.slice(2).forEach(list => {
+                if (typeof getEcsExtraLists === 'function') {
+                    getEcsExtraLists().forEach(list => {
                         const val = (appState.ecsExtraData && appState.ecsExtraData[list.id] && appState.ecsExtraData[list.id][uniqueCodeId]) || '';
                         if (val) extraFields.push({ label: list.name, value: val });
                     });
