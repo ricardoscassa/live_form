@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navisworks Code Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 24px 0;
+            margin-bottom: 32px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 16px;
+        }
+
+        .categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            max-width: 420px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            font-weight: 500;
+            color: #2d3748;
+            line-height: 1.3;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+        }
+
+        textarea {
+            flex: 1;
+            padding: 16px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            resize: none;
+            min-height: 300px;
+            background: #f7fafc;
+            color: #1a202c;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        textarea:read-only {
+            background: #edf2f7;
+            color: #2d3748;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            color: #2d3748;
+        }
+
+        button:hover {
+            border-color: #a0aec0;
+            background: #f7fafc;
+        }
+
+        button.primary {
+            background: #4299e1;
+            color: white;
+            border-color: #4299e1;
+        }
+
+        button.primary:hover {
+            background: #3182ce;
+            border-color: #3182ce;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-item {
+            background: #f7fafc;
+            padding: 16px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .summary-label {
+            color: #718096;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .summary-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1a202c;
+        }
+
+        .summary-item.processed .summary-value {
+            color: #3182ce;
+        }
+
+        .summary-item.success .summary-value {
+            color: #38a169;
+        }
+
+        .copy-feedback {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #38a169;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .copy-feedback.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Navisworks Code Processor</h1>
+            <p class="subtitle">Filter and process codes for Navisworks</p>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="card">
+            <h2>Processing Rules</h2>
+            <div class="categories">
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="process-leading-check">
+                    <label for="process-leading-check">
+                        1) Remove first char IF code starts with "1" AND contains SE/ST/SV.
+                    </label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="process-suffix-check">
+                    <label for="process-suffix-check">
+                        2) Trim only ending ".#" or "-#" after SE/ST/SV####.
+                    </label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="process-bilfinger-check">
+                    <label for="process-bilfinger-check">
+                        3) Bilfinger pipes: remove first char, force TYB→ISO, keep ISO as ISO, pad SPL1→SPL01, SPL2→SPL02, remove slash "/".
+                    </label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="process-asite-check">
+                    <label for="process-asite-check">
+                        4) Asite model pipe: remove first char and cut from "SPL" onwards (drop SPL and "/").
+                    </label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="process-ecs-l4spe-check">
+                    <label for="process-ecs-l4spe-check">
+                        5) Export ECS Codes as L4SPE (for codes like 1DVL5103-04-61). When ticked, matching ECS codes export using L4SPE → ECS Code instead of Name.
+                    </label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="process-equipment">
+                    <label for="process-equipment">
+                        6) Export Equipments codes, cable trays, RA
+                    </label>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="two-column">
+            <div class="card column">
+                <h2>Input Codes</h2>
+                <textarea id="input-codes" placeholder="Paste your codes here...&#10;Examples:&#10;1ABC1234TYB0001/SPL2&#10;2HNX06ISO7777/SPL10&#10;1HNX06ST2345-02&#10;1ABC1234ISO0001/SPL10"></textarea>
+                <div class="button-group">
+                    <button onclick="clearInput()">Clear</button>
+                </div>
+            </div>
+
+            <div class="card column">
+                <h2>Processed Output</h2>
+                <textarea id="output-codes" readonly placeholder="Processed codes will appear here..."></textarea>
+                <div class="button-group">
+                    <button onclick="copyToClipboard()">Copy</button>
+                    <button class="primary" onclick="exportXML()" id="export-btn" disabled>Export XML</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="summary-card" style="display: none;">
+            <h2>Processing Summary</h2>
+            <div class="summary">
+                <div class="summary-item">
+                    <div class="summary-label">Total Codes</div>
+                    <div class="summary-value" id="total-count">0</div>
+                </div>
+                <div class="summary-item processed">
+                    <div class="summary-label">Processed</div>
+                    <div class="summary-value" id="processed-count">0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Unchanged</div>
+                    <div class="summary-value" id="unchanged-count">0</div>
+                </div>
+                <div class="summary-item success">
+                    <div class="summary-label">Ready to Export</div>
+                    <div class="summary-value">✓</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="copy-feedback" id="copy-feedback">Copied to clipboard!</div>
+
+<script>
+let processedData = [];
+
+/* ============================================================
+   RULES
+   ============================================================ */
+
+const RULES = [
+    { id: 'process-leading-check', fn: code => (/^\d/.test(code) && /(SE|ST|SV)\d{4}/.test(code)) ? code.substring(1) : code },
+    { id: 'process-suffix-check', fn: code => {
+        const m = code.match(/(SE|ST|SV)\d{4}([.-]\d+)$/);
+        return m ? code.substring(0, m.index + m[1].length + 4) : code;
+    }},
+    { id: 'process-bilfinger-check', fn: code => {
+        const m = code.match(/^(\d)([A-Z]{3}\d{4})(TYB|ISO)(\d{4})(\/)?SPL(\d{1,2})$/);
+        if (!m) return code;
+        let type = m[3] === "TYB" ? "ISO" : m[3];
+        let spl = m[6].padStart(2, '0');
+        return `${m[2]}${type}${m[4]}SPL${spl}`;
+    }},
+    { id: 'process-asite-check', fn: code => {
+        if (!code.includes("SPL")) return code;
+        let out = code.substring(1);
+        const idx = out.indexOf("SPL");
+        if (idx !== -1) out = out.substring(0, idx);
+        return out.replace(/\/$/, '');
+    }},
+    { id: 'process-ecs-l4spe-check', fn: code => /^\d[A-Z]{3}\d{4}-\d{1,2}-\d{1,3}$/.test(code.trim()) ? code.slice(1) : code },
+    { id: 'process-equipment', fn: code => {
+        const trimmed = code.trim();
+        // skip ECS/L4SPE codes
+        if (/^\d[A-Z]{3}\d{4}-\d{1,2}-\d{1,3}$/.test(trimmed)) return code;
+        // remove leading digit
+        let out = trimmed.replace(/^\d/, '');
+        // remove trailing dash
+        out = out.replace(/-$/, '');
+        return out;
+    }}
+];
+
+/* ============================================================
+   PROCESSING PIPELINE
+   ============================================================ */
+
+function processCodes() {
+    const input = document.getElementById('input-codes').value;
+    const lines = input.split('\n').map(l => l.trim()).filter(Boolean);
+
+    processedData = [];
+    let processedCount = 0;
+
+    lines.forEach(line => {
+        const original = line;
+        let current = original;
+        const ecsDetected = /^\d[A-Z]{3}\d{4}-\d{1,2}-\d{1,3}$/.test(line.trim());
+        let changed = false;
+
+        RULES.forEach(rule => {
+            if (document.getElementById(rule.id)?.checked) {
+                const next = rule.fn(current);
+                if (next !== current) { current = next; changed = true; }
+            }
+        });
+
+        processedData.push({ original, processed: current, matched: changed, isEcs: ecsDetected });
+        if (changed) processedCount++;
+    });
+
+    updateUI(processedCount);
+}
+
+/* ============================================================
+   UI + EXPORT
+   ============================================================ */
+
+function updateUI(processedCount) {
+    document.getElementById('output-codes').value = processedData.map(i => i.processed).join('\n');
+
+    if (processedData.length) {
+        document.getElementById('summary-card').style.display = 'block';
+        document.getElementById('total-count').textContent = processedData.length;
+        document.getElementById('processed-count').textContent = processedCount;
+        document.getElementById('unchanged-count').textContent = processedData.length - processedCount;
+        document.getElementById('export-btn').disabled = false;
+    } else {
+        document.getElementById('summary-card').style.display = 'none';
+        document.getElementById('export-btn').disabled = true;
+    }
+}
+
+function clearInput() {
+    document.getElementById('input-codes').value = '';
+    processCodes();
+}
+
+function copyToClipboard() {
+    navigator.clipboard.writeText(document.getElementById('output-codes').value);
+    const fb = document.getElementById('copy-feedback');
+    fb.classList.add('show');
+    setTimeout(() => fb.classList.remove('show'), 1500);
+}
+
+function escapeXml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+function generateNavisworksXML() {
+    const now = new Date();
+    const pad = n => n.toString().padStart(2, '0');
+    const filename = `Output_${pad(now.getDate())}${pad(now.getMonth()+1)}_${pad(now.getHours())}${pad(now.getMinutes())}.xml`;
+    const exportEcsAsL4spe = document.getElementById('process-ecs-l4spe-check')?.checked;
+
+    const unique = [...new Map(processedData.map(item => [item.processed.trim(), item])).values()];
+    let conditions = '';
+
+    unique.forEach((item,i) => {
+        const flags = i===0?'10':'74';
+        const c = item.processed.trim();
+        if (exportEcsAsL4spe && item.isEcs) {
+            conditions += `
+      <condition test="contains" flags="${flags}">
+        <category>
+          <name internal="LcOaPropOverrideCat">L4SPE</name>
+        </category>
+        <property>
+          <name internal="ECS Code">ECS Code</name>
+        </property>
+        <value>
+          <data type="wstring">${escapeXml(c)}</data>
+        </value>
+      </condition>`;
+        } else {
+            conditions += `
+      <condition test="contains" flags="${flags}">
+        <property>
+          <name internal="LcOaSceneBaseUserName">Name</name>
+        </property>
+        <value>
+          <data type="wstring">${escapeXml(c)}</data>
+        </value>
+      </condition>`;
+        }
+    });
+
+    return {
+        xml: `<?xml version="1.0" encoding="UTF-8"?>
+<exchange xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:noNamespaceSchemaLocation="http://download.autodesk.com/us/navisworks/schemas/nw-exchange-12.0.xsd"
+units="m" filename="${escapeXml(filename)}">
+  <findspec mode="all" disjoint="0">
+    <conditions>${conditions}
+    </conditions>
+    <locator>/</locator>
+  </findspec>
+</exchange>`,
+        filename
+    };
+}
+
+function exportXML() {
+    const { xml, filename } = generateNavisworksXML();
+    const link = document.createElement('a');
+    link.href = 'data:text/xml;charset=utf-8,' + encodeURIComponent(xml);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+/* ============================================================
+   EVENT LISTENERS
+   ============================================================ */
+
+document.getElementById('input-codes').addEventListener('input', processCodes);
+RULES.forEach(r => document.getElementById(r.id)?.addEventListener('change', processCodes));
+</script>
