@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/apply-zip-filename-safety.yml'
+      - '.github/zip-patch-trigger'
   workflow_dispatch:
 
 permissions:
