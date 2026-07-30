@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a0a00">
+  <title>Inspection Photo Recovery</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      --bg: #120700;
+      --panel: #211008;
+      --panel-2: #2d160a;
+      --line: rgba(255, 255, 255, 0.13);
+      --text: #fff8f1;
+      --muted: #c7b7aa;
+      --orange: #ff6b00;
+      --orange-2: #ff9a3c;
+      --green: #34d979;
+      --red: #ff5f57;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, rgba(255,107,0,.18), transparent 35%),
+        linear-gradient(180deg, #1a0a00 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+
+    button, input { font: inherit; }
+
+    .page {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: max(18px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+    }
+
+    .hero {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(24px, 5vw, 36px);
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .badge {
+      flex: 0 0 auto;
+      border: 1px solid rgba(255,107,0,.5);
+      background: rgba(255,107,0,.12);
+      color: var(--orange-2);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      padding: 12px;
+      background: rgba(33,16,8,.92);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      position: sticky;
+      top: max(8px, env(safe-area-inset-top));
+      z-index: 20;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 30px rgba(0,0,0,.3);
+    }
+
+    .search {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      background: #120903;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 11px 12px;
+      outline: none;
+    }
+
+    .search:focus { border-color: var(--orange); }
+
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 13px;
+      color: var(--text);
+      background: var(--panel-2);
+      cursor: pointer;
+      font-weight: 700;
+      touch-action: manipulation;
+    }
+
+    .btn.primary {
+      border-color: var(--orange);
+      background: linear-gradient(135deg, var(--orange), #cf4f00);
+      color: white;
+    }
+
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn:active { transform: translateY(1px); }
+
+    .status {
+      margin: 12px 2px 16px;
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .status.good { color: var(--green); }
+    .status.bad { color: #ffaaa5; }
+
+    .notice {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,107,0,.35);
+      background: rgba(255,107,0,.09);
+      color: #ffe2cd;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: rgba(33,16,8,.92);
+      border-radius: 14px;
+      box-shadow: 0 12px 26px rgba(0,0,0,.25);
+    }
+
+    .photo-wrap {
+      aspect-ratio: 4 / 3;
+      background: #080402;
+      display: grid;
+      place-items: center;
+      cursor: zoom-in;
+    }
+
+    .photo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .meta { padding: 12px; }
+
+    .room {
+      color: var(--orange-2);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 5px;
+      overflow-wrap: anywhere;
+    }
+
+    .ecs {
+      font-weight: 700;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      margin-bottom: 8px;
+    }
+
+    .date {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 11px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      padding: 36px 20px;
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+      color: var(--muted);
+    }
+
+    .viewer {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      background: rgba(0,0,0,.94);
+      padding: max(54px, env(safe-area-inset-top)) 12px max(20px, env(safe-area-inset-bottom));
+    }
+
+    .viewer.active { display: grid; place-items: center; }
+
+    .viewer img {
+      max-width: 100%;
+      max-height: calc(100vh - 90px);
+      object-fit: contain;
+    }
+
+    .viewer-close {
+      position: absolute;
+      top: max(10px, env(safe-area-inset-top));
+      right: 12px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.35);
+      background: rgba(30,30,30,.88);
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 700px) {
+      .hero { display: block; }
+      .badge { display: inline-block; margin-top: 10px; }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .search { grid-column: 1 / -1; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="hero">
+      <div>
+        <h1>Inspection Photo Recovery</h1>
+        <p class="subtitle">Reads the photos already stored by the inspection app on this device. Nothing is uploaded.</p>
+      </div>
+      <div class="badge">Temporary recovery tool</div>
+    </div>
+
+    <div class="notice">
+      Open this page in the same browser and from the same website address used for the inspection app. Use <strong>Download</strong> for each photo. On iPhone, <strong>Open</strong> also lets you long-press the image or use the browser share options.
+    </div>
+
+    <div class="toolbar">
+      <input id="searchInput" class="search" type="search" placeholder="Search room or ECS code" autocomplete="off">
+      <button id="refreshBtn" class="btn" type="button">Refresh</button>
+      <button id="downloadVisibleBtn" class="btn primary" type="button">Download visible</button>
+    </div>
+
+    <div id="status" class="status">Reading stored photos…</div>
+    <section id="photoGrid" class="grid" aria-live="polite"></section>
+  </main>
+
+  <div id="viewer" class="viewer" role="dialog" aria-modal="true" aria-label="Photo preview">
+    <button id="viewerClose" class="viewer-close" type="button" aria-label="Close">×</button>
+    <img id="viewerImage" alt="Inspection photo preview">
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const DB_NAME = 'ecs_photos_db';
+      const DB_VERSION = 1;
+      const STORE_NAME = 'photos';
+      const MAX_FILENAME_BASE = 135;
+
+      const grid = document.getElementById('photoGrid');
+      const status = document.getElementById('status');
+      const searchInput = document.getElementById('searchInput');
+      const refreshBtn = document.getElementById('refreshBtn');
+      const downloadVisibleBtn = document.getElementById('downloadVisibleBtn');
+      const viewer = document.getElementById('viewer');
+      const viewerImage = document.getElementById('viewerImage');
+      const viewerClose = document.getElementById('viewerClose');
+
+      let allPhotos = [];
+      let visiblePhotos = [];
+      let activeObjectUrl = null;
+
+      function setStatus(message, kind = '') {
+        status.textContent = message;
+        status.className = `status ${kind}`.trim();
+      }
+
+      function openDb() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = event => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+              store.createIndex('codeId', 'codeId', { unique: false });
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error || new Error('Could not open the photo database.'));
+          request.onblocked = () => reject(new Error('The photo database is currently blocked by another tab. Close the inspection app and refresh this page.'));
+        });
+      }
+
+      async function readPhotos() {
+        const db = await openDb();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(STORE_NAME, 'readonly');
+          const request = transaction.objectStore(STORE_NAME).getAll();
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error || new Error('Could not read stored photos.'));
+          transaction.oncomplete = () => db.close();
+        });
+      }
+
+      function deduplicateGroupedPhotos(photos) {
+        const seenGroups = new Set();
+        return photos.filter(photo => {
+          if (!photo.groupPhotoId) return true;
+          if (seenGroups.has(photo.groupPhotoId)) return false;
+          seenGroups.add(photo.groupPhotoId);
+          return true;
+        });
+      }
+
+      function safePart(value) {
+        return String(value || '')
+          .normalize('NFKD')
+          .replace(/[^a-z0-9_-]+/gi, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_+|_+$/g, '') || 'photo';
+      }
+
+      function timestampPart(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'unknown-date';
+        const pad = number => String(number).padStart(2, '0');
+        return `${pad(date.getDate())}${pad(date.getMonth() + 1)}${String(date.getFullYear()).slice(-2)}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+      }
+
+      function extensionFor(dataUrl) {
+        const match = /^data:image\/([a-z0-9.+-]+);/i.exec(String(dataUrl || ''));
+        const type = match ? match[1].toLowerCase() : 'jpeg';
+        if (type.includes('png')) return 'png';
+        if (type.includes('webp')) return 'webp';
+        if (type.includes('gif')) return 'gif';
+        return 'jpg';
+      }
+
+      function filenameFor(photo) {
+        const room = safePart(photo.roomName);
+        const ecs = safePart(photo.exportEcsCode || photo.ecsCode);
+        const date = timestampPart(photo.timestamp);
+        const unique = photo.id != null ? `-${photo.id}` : '';
+        let base = `${room}-${ecs}-${date}${unique}`;
+        if (base.length > MAX_FILENAME_BASE) {
+          const tail = `-${date}${unique}`;
+          const available = Math.max(30, MAX_FILENAME_BASE - room.length - tail.length - 2);
+          base = `${room}-${ecs.slice(0, available)}${tail}`;
+        }
+        return `${base}.${extensionFor(photo.dataUrl)}`;
+      }
+
+      function dataUrlToBlob(dataUrl) {
+        const parts = String(dataUrl || '').split(',');
+        if (parts.length < 2) throw new Error('Photo data is incomplete.');
+        const mimeMatch = /^data:([^;]+);base64$/i.exec(parts[0]);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const binary = atob(parts.slice(1).join(','));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+        return new Blob([bytes], { type: mime });
+      }
+
+      function triggerDownload(photo) {
+        const blob = dataUrlToBlob(photo.dataUrl);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filenameFor(photo);
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 15000);
+      }
+
+      function openViewer(photo) {
+        if (activeObjectUrl) URL.revokeObjectURL(activeObjectUrl);
+        activeObjectUrl = URL.createObjectURL(dataUrlToBlob(photo.dataUrl));
+        viewerImage.src = activeObjectUrl;
+        viewer.classList.add('active');
+      }
+
+      function closeViewer() {
+        viewer.classList.remove('active');
+        viewerImage.src = '';
+        if (activeObjectUrl) {
+          URL.revokeObjectURL(activeObjectUrl);
+          activeObjectUrl = null;
+        }
+      }
+
+      function displayName(photo) {
+        return photo.exportEcsCode || photo.ecsCode || 'Unknown ECS code';
+      }
+
+      function formatDate(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Unknown date';
+        return new Intl.DateTimeFormat(undefined, {
+          dateStyle: 'medium',
+          timeStyle: 'medium'
+        }).format(date);
+      }
+
+      function render() {
+        const query = searchInput.value.trim().toLowerCase();
+        visiblePhotos = allPhotos.filter(photo => {
+          if (!query) return true;
+          return `${photo.roomName || ''} ${photo.ecsCode || ''} ${photo.exportEcsCode || ''}`.toLowerCase().includes(query);
+        });
+
+        grid.innerHTML = '';
+        downloadVisibleBtn.disabled = visiblePhotos.length === 0;
+
+        if (visiblePhotos.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = allPhotos.length === 0
+            ? 'No photos were found in this browser for this website address.'
+            : 'No photos match the current search.';
+          grid.appendChild(empty);
+          setStatus(allPhotos.length === 0 ? 'No stored photos found.' : `0 of ${allPhotos.length} photos shown.`);
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        visiblePhotos.forEach((photo, index) => {
+          const card = document.createElement('article');
+          card.className = 'card';
+
+          const photoWrap = document.createElement('div');
+          photoWrap.className = 'photo-wrap';
+          photoWrap.title = 'Open full-size photo';
+
+          const img = document.createElement('img');
+          img.src = photo.dataUrl;
+          img.alt = `Inspection photo ${index + 1}`;
+          img.loading = 'lazy';
+          photoWrap.appendChild(img);
+          photoWrap.addEventListener('click', () => openViewer(photo));
+
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+
+          const room = document.createElement('div');
+          room.className = 'room';
+          room.textContent = photo.roomName || 'Unknown room';
+
+          const ecs = document.createElement('div');
+          ecs.className = 'ecs';
+          ecs.textContent = displayName(photo);
+
+          const date = document.createElement('div');
+          date.className = 'date';
+          date.textContent = `${formatDate(photo.timestamp)} · File ${filenameFor(photo)}`;
+
+          const actions = document.createElement('div');
+          actions.className = 'actions';
+
+          const openButton = document.createElement('button');
+          openButton.className = 'btn';
+          openButton.type = 'button';
+          openButton.textContent = 'Open';
+          openButton.addEventListener('click', () => openViewer(photo));
+
+          const downloadButton = document.createElement('button');
+          downloadButton.className = 'btn primary';
+          downloadButton.type = 'button';
+          downloadButton.textContent = 'Download';
+          downloadButton.addEventListener('click', () => {
+            try {
+              triggerDownload(photo);
+            } catch (error) {
+              setStatus(`Download failed: ${error.message}`, 'bad');
+            }
+          });
+
+          actions.append(openButton, downloadButton);
+          meta.append(room, ecs, date, actions);
+          card.append(photoWrap, meta);
+          fragment.appendChild(card);
+        });
+
+        grid.appendChild(fragment);
+        setStatus(`${visiblePhotos.length} of ${allPhotos.length} stored photo(s) shown.`, 'good');
+      }
+
+      async function loadPhotos() {
+        refreshBtn.disabled = true;
+        downloadVisibleBtn.disabled = true;
+        setStatus('Reading stored photos…');
+        grid.innerHTML = '';
+
+        try {
+          const photos = await readPhotos();
+          allPhotos = deduplicateGroupedPhotos(photos)
+            .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+          render();
+        } catch (error) {
+          console.error(error);
+          allPhotos = [];
+          visiblePhotos = [];
+          grid.innerHTML = '<div class="empty">Could not open the inspection photo database. Make sure this page is opened from the same website and browser as the inspection app.</div>';
+          setStatus(error.message || 'Could not read stored photos.', 'bad');
+        } finally {
+          refreshBtn.disabled = false;
+        }
+      }
+
+      async function downloadVisible() {
+        if (visiblePhotos.length === 0) return;
+        const confirmed = window.confirm(`This will request ${visiblePhotos.length} separate downloads. Your browser may ask you to allow multiple downloads. Continue?`);
+        if (!confirmed) return;
+
+        downloadVisibleBtn.disabled = true;
+        setStatus(`Starting ${visiblePhotos.length} download(s)…`);
+
+        for (let index = 0; index < visiblePhotos.length; index += 1) {
+          try {
+            triggerDownload(visiblePhotos[index]);
+          } catch (error) {
+            setStatus(`Stopped at photo ${index + 1}: ${error.message}`, 'bad');
+            downloadVisibleBtn.disabled = false;
+            return;
+          }
+          await new Promise(resolve => setTimeout(resolve, 450));
+        }
+
+        setStatus(`${visiblePhotos.length} download request(s) sent. Check your Downloads or Files folder.`, 'good');
+        downloadVisibleBtn.disabled = false;
+      }
+
+      searchInput.addEventListener('input', render);
+      refreshBtn.addEventListener('click', loadPhotos);
+      downloadVisibleBtn.addEventListener('click', downloadVisible);
+      viewerClose.addEventListener('click', closeViewer);
+      viewer.addEventListener('click', event => {
+        if (event.target === viewer) closeViewer();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeViewer();
+      });
+
+      loadPhotos();
+    })();
+  </script>
+</body>
+</html>
