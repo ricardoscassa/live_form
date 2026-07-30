@@ -1,0 +1,141 @@
+name: Apply ZIP filename safety limit
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-zip-filename-safety.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-zip-export:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Apply safe ZIP photo filename limit
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          files = [Path('new_test1506.html'), Path('index.html')]
+
+          old = """                const filenameCounts = {};
+                photosForZip.forEach((photo, i) => {
+                    const base64 = photo.dataUrl.split(',')[1];
+                    const safe = (str) => String(str || '').replace(/[^a-z0-9_\\-]/gi, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+                    const ts = new Date(photo.timestamp);
+                    const dd = String(ts.getDate()).padStart(2, '0');
+                    const mm = String(ts.getMonth() + 1).padStart(2, '0');
+                    const yy = String(ts.getFullYear()).slice(-2);
+                    const hh = String(ts.getHours()).padStart(2, '0');
+                    const min = String(ts.getMinutes()).padStart(2, '0');
+                    const ss = String(ts.getSeconds()).padStart(2, '0');
+                    // Include full timestamp (HHMMSS) so each photo gets a unique name
+                    const ecsNameForExport = photo.exportEcsCode || photo.ecsCode;
+                    const baseFilename = `${safe(photo.roomName)}-${safe(ecsNameForExport)}-${dd}${mm}${yy}-${hh}${min}${ss}`;
+                    // Also track count per base name to handle photos taken in the same second
+                    filenameCounts[baseFilename] = (filenameCounts[baseFilename] || 0) + 1;
+                    const suffix = filenameCounts[baseFilename] > 1 ? `_${filenameCounts[baseFilename]}` : '';
+                    const filename = `${baseFilename}${suffix}.jpg`;
+                    folder.file(filename, base64, { base64: true });
+                });"""
+
+          new = """                // Keep each ZIP entry safely below Windows path limits.
+                // The 120-character cap includes the duplicate suffix and .jpg extension.
+                const ZIP_FILENAME_MAX_CHARS = 120;
+                const filenameCounts = {};
+                const usedFilenames = new Set();
+
+                // Small deterministic hash preserves uniqueness when a long name is shortened.
+                const shortFilenameHash = (value) => {
+                    let hash = 2166136261;
+                    const text = String(value || '');
+                    for (let i = 0; i < text.length; i++) {
+                        hash ^= text.charCodeAt(i);
+                        hash = Math.imul(hash, 16777619);
+                    }
+                    return (hash >>> 0).toString(36).padStart(7, '0').slice(-7);
+                };
+
+                const limitZipFilename = (baseName, suffix = '', extension = '.jpg') => {
+                    const fullName = `${baseName}${suffix}${extension}`;
+                    if (fullName.length <= ZIP_FILENAME_MAX_CHARS) return fullName;
+
+                    const hashPart = `-${shortFilenameHash(baseName)}`;
+                    const availableBaseLength = Math.max(
+                        1,
+                        ZIP_FILENAME_MAX_CHARS - suffix.length - extension.length - hashPart.length
+                    );
+
+                    return `${baseName.slice(0, availableBaseLength)}${hashPart}${suffix}${extension}`;
+                };
+
+                photosForZip.forEach((photo, i) => {
+                    const base64 = photo.dataUrl.split(',')[1];
+                    const safe = (str) => String(str || '').replace(/[^a-z0-9_\\-]/gi, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+                    const ts = new Date(photo.timestamp);
+                    const dd = String(ts.getDate()).padStart(2, '0');
+                    const mm = String(ts.getMonth() + 1).padStart(2, '0');
+                    const yy = String(ts.getFullYear()).slice(-2);
+                    const hh = String(ts.getHours()).padStart(2, '0');
+                    const min = String(ts.getMinutes()).padStart(2, '0');
+                    const ss = String(ts.getSeconds()).padStart(2, '0');
+                    // Include full timestamp (HHMMSS) so each photo gets a unique name
+                    const ecsNameForExport = photo.exportEcsCode || photo.ecsCode;
+                    const baseFilename = `${safe(photo.roomName)}-${safe(ecsNameForExport)}-${dd}${mm}${yy}-${hh}${min}${ss}`;
+                    // Also track count per base name to handle photos taken in the same second
+                    filenameCounts[baseFilename] = (filenameCounts[baseFilename] || 0) + 1;
+                    const suffix = filenameCounts[baseFilename] > 1 ? `_${filenameCounts[baseFilename]}` : '';
+
+                    let filename = limitZipFilename(baseFilename, suffix);
+                    let collisionCounter = 2;
+                    while (usedFilenames.has(filename)) {
+                        filename = limitZipFilename(baseFilename, `${suffix}_${collisionCounter}`);
+                        collisionCounter += 1;
+                    }
+                    usedFilenames.add(filename);
+
+                    folder.file(filename, base64, { base64: true });
+                });"""
+
+          marker = 'const ZIP_FILENAME_MAX_CHARS = 120;'
+          changed = []
+
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+
+              if marker in text:
+                  print(f'{path}: safety limit already present')
+                  continue
+
+              occurrences = text.count(old)
+              if occurrences != 1:
+                  raise SystemExit(f'{path}: expected exactly one ZIP export block, found {occurrences}')
+
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+              changed.append(str(path))
+              print(f'{path}: patched')
+
+          if not changed:
+              print('No files needed changes.')
+          PY
+
+      - name: Commit patched HTML files
+        shell: bash
+        run: |
+          if git diff --quiet -- new_test1506.html index.html; then
+            echo 'No HTML changes to commit.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add new_test1506.html index.html
+          git commit -m 'fix: keep photo ZIP filenames Windows-safe'
+          git push
