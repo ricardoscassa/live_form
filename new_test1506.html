@@ -2877,6 +2877,255 @@
             display: none !important;
         }
 
+
+        /* ── ECS Bulk / Multiple Selection ─────────────────────────────── */
+        #ecsBulkSelectionModal {
+            z-index: 12000;
+        }
+
+        .ecs-bulk-modal {
+            width: min(760px, calc(100vw - 28px));
+            max-width: 760px;
+            max-height: min(90vh, 820px);
+            padding: 0;
+            text-align: left;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ecs-bulk-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 20px 20px 14px;
+            border-bottom: 1px solid #e4e7ec;
+            background: #fff;
+        }
+
+        .ecs-bulk-header h3 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 1.3rem;
+        }
+
+        .ecs-bulk-room {
+            margin-top: 4px;
+            color: #667085;
+            font-size: 0.88rem;
+            font-weight: 650;
+        }
+
+        .ecs-bulk-close {
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-radius: 50%;
+            background: #f2f4f7;
+            color: #344054;
+            cursor: pointer;
+            font-size: 1.35rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ecs-bulk-body {
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px 20px 20px;
+            background: #f8fafc;
+        }
+
+        .ecs-bulk-help {
+            margin: 0 0 12px;
+            color: #667085;
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+
+        .ecs-bulk-search {
+            width: 100%;
+            min-height: 48px;
+            padding: 12px 14px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            background: #fff;
+            color: #1f2937;
+            font-size: 16px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .ecs-bulk-search:focus {
+            border-color: #FF6B00;
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+        }
+
+        .ecs-bulk-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 12px 0 10px;
+            color: #475467;
+            font-size: 0.82rem;
+            font-weight: 750;
+        }
+
+        .ecs-bulk-selected-count {
+            color: #FF6B00;
+        }
+
+        .ecs-bulk-results {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: min(34vh, 310px);
+            overflow-y: auto;
+            padding-right: 3px;
+        }
+
+        .ecs-bulk-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 52px;
+            padding: 10px 12px;
+            border: 1px solid #e4e7ec;
+            border-radius: 12px;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ecs-bulk-row.selected {
+            border-color: #FF6B00;
+            background: #fff7ed;
+            box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.10);
+        }
+
+        .ecs-bulk-checkbox {
+            width: 22px;
+            height: 22px;
+            margin: 0;
+            accent-color: #FF6B00;
+            flex-shrink: 0;
+        }
+
+        .ecs-bulk-code {
+            min-width: 0;
+            color: #111827;
+            font-size: 0.98rem;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .ecs-bulk-empty {
+            padding: 24px 12px;
+            text-align: center;
+            color: #667085;
+            font-size: 0.9rem;
+            font-weight: 650;
+            border: 1px dashed #d0d5dd;
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .ecs-bulk-assign {
+            margin-top: 16px;
+            padding: 14px;
+            border: 1px solid #e4e7ec;
+            border-radius: 14px;
+            background: #fff;
+        }
+
+        .ecs-bulk-assign h4 {
+            margin: 0 0 5px;
+            color: #1f2937;
+            font-size: 1rem;
+        }
+
+        .ecs-bulk-assign-note {
+            margin: 0 0 12px;
+            color: #667085;
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+
+        .ecs-bulk-controls {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .ecs-bulk-control {
+            min-width: 0;
+        }
+
+        .ecs-bulk-control label {
+            display: block;
+            margin-bottom: 5px;
+            color: #475467;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.45px;
+        }
+
+        .ecs-bulk-select {
+            width: 100%;
+            min-height: 44px;
+            padding: 0 34px 0 11px;
+            border: 1px solid #d0d5dd;
+            border-radius: 10px;
+            background-color: #f8fafc;
+            color: #1f2937;
+            font-size: 16px;
+            font-family: inherit;
+        }
+
+        .ecs-bulk-select:focus {
+            outline: none;
+            border-color: #FF6B00;
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.10);
+        }
+
+        .ecs-bulk-apply {
+            width: 100%;
+            margin-top: 12px;
+            min-height: 50px;
+        }
+
+        #codeCheckPage .bottom-nav-btn.ecs-bulk-nav-btn {
+            color: #a63f00;
+        }
+
+        @media (max-width: 899px) {
+            #codeCheckPage .bottom-nav-actions {
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 560px) {
+            .ecs-bulk-modal {
+                width: calc(100vw - 16px);
+                max-height: calc(100vh - 24px);
+                border-radius: 16px;
+            }
+            .ecs-bulk-header { padding: 16px 14px 12px; }
+            .ecs-bulk-body { padding: 13px 14px 16px; }
+            .ecs-bulk-controls { grid-template-columns: 1fr; }
+            .ecs-bulk-results { max-height: 32vh; }
+        }
+
         /* ── Room Done pill shown in dropdown list ────────────────────── */
         .room-done-pill {
             display: inline-flex;
@@ -2961,6 +3210,11 @@
             z-index: 9999;
         }
         .bottom-nav-actions.nav-shrunk { transform: translateX(-50%) scale(.88); opacity: .88; }
+        #codeCheckPage.ecs-inline-search-active .bottom-nav-actions {
+            transform: translateX(-50%) translateY(calc(100% + 24px)) scale(.96);
+            opacity: 0;
+            pointer-events: none;
+        }
         .bottom-nav-btn {
             min-width: 0;
             min-height: 54px;
@@ -3188,7 +3442,7 @@ Room Codes (Room- Codes)
                                 <button id="addEcsDropdownList" class="dropdown-editor-btn add" style="width:auto;padding:8px 16px;">+ Add New List</button>
                             </div>
                             <p style="font-size:0.9rem;color:#666;margin-bottom:15px;">
-                                Each list becomes a dropdown column on every ECS row. At least one list must remain. The first list is the primary Status column.
+                                Each list becomes a column on every ECS row. Drag lists to change their display order; Status and Comment keep their assigned behavior.
                             </p>
                             <div id="ecsDropdownListsContainer"></div>
                         </div>
@@ -3394,6 +3648,7 @@ Room Codes (Room- Codes)
                         <button id="shareCodeCheckPage" class="bottom-nav-btn" aria-label="QR Code"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 17h1v1h-1z"/></svg><span>QR</span></button>
                         <div class="bottom-nav-divider" role="separator"></div>
                         <button type="button" class="bottom-nav-btn bottom-nav-photo-btn" aria-label="Download Photos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5L5 20"/></svg><span>Photos</span></button>
+                        <button id="openEcsBulkSelection" type="button" class="bottom-nav-btn ecs-bulk-nav-btn" aria-label="Multiple ECS selection"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="7" rx="1"/><polyline points="4.5 7.5 6.5 9.5 9 6"/><rect x="3" y="13" width="7" height="7" rx="1"/><polyline points="4.5 16.5 6.5 18.5 9 15"/><line x1="13" y1="7.5" x2="21" y2="7.5"/><line x1="13" y1="16.5" x2="21" y2="16.5"/></svg><span>Multi</span></button>
                         <button id="openEcsGlobalSearchDesktop" type="button" class="bottom-nav-btn bottom-nav-desktop-btn" aria-label="Find ECS Code"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg><span>Find</span></button>
                         <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="downloadJsonCodeCheckPage" aria-label="Download JSON"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>JSON</span></button>
                         <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn bottom-nav-danger" data-click-target="backToCodeInput" aria-label="Back to Input"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg><span>Back</span></button>
@@ -3814,6 +4069,34 @@ Room Codes (Room- Codes)
             </div>
         </div>
 
+
+        <div id="ecsBulkSelectionModal" class="modal" aria-hidden="true">
+            <div class="modal-content ecs-bulk-modal" role="dialog" aria-modal="true" aria-labelledby="ecsBulkSelectionTitle">
+                <div class="ecs-bulk-header">
+                    <div>
+                        <h3 id="ecsBulkSelectionTitle">Multiple ECS selection</h3>
+                        <div id="ecsBulkRoomName" class="ecs-bulk-room"></div>
+                    </div>
+                    <button id="ecsBulkSelectionClose" class="ecs-bulk-close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <div class="ecs-bulk-body">
+                    <p class="ecs-bulk-help">Only ECS codes with every configured field still empty are shown. Selections stay active when the search changes.</p>
+                    <input id="ecsBulkSearch" class="ecs-bulk-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search part of an ECS code">
+                    <div class="ecs-bulk-summary">
+                        <span id="ecsBulkEligibleCount">0 available</span>
+                        <span id="ecsBulkSelectedCount" class="ecs-bulk-selected-count">0 selected</span>
+                    </div>
+                    <div id="ecsBulkResults" class="ecs-bulk-results"></div>
+                    <div class="ecs-bulk-assign">
+                        <h4>Apply values</h4>
+                        <p class="ecs-bulk-assign-note">Choose one or more dropdown values. Blank dropdowns will not be changed.</p>
+                        <div id="ecsBulkListControls" class="ecs-bulk-controls"></div>
+                        <button id="ecsBulkApply" class="button success ecs-bulk-apply" type="button" disabled>Apply to selected ECS codes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="ecsGlobalSearchModal" class="modal">
             <div class="modal-content ecs-global-search-modal">
                 <div class="ecs-global-search-header">
@@ -4060,6 +4343,8 @@ rooms: [],
             customCommentOptions: [],
             // ecsDropdownLists: array of {id, name, options[]} — drives extra columns in ECS rows
             ecsDropdownLists: [],
+            // v1 stored Status/Comment by array position; v2 stores a stable role on each list.
+            ecsListRoleVersion: 1,
             // ecsExtraData: { listId: { uniqueCodeId: selectedValue } }
             ecsExtraData: {},
             assetTagz2: {
@@ -4096,6 +4381,7 @@ rooms: [],
                 customStatusOptions: [],
                 customCommentOptions: [],
                 ecsDropdownLists: [],
+                ecsListRoleVersion: 1,
                 ecsExtraData: {},
                 ecsQuickEntryMode: false,
                 ecsQuickEntryState: {},
@@ -4162,16 +4448,46 @@ rooms: [],
             'Unable To Verify'
         ];
 
-        // Get current status options (custom or default)
-        function getCodeStatusOptions() {
-            const lists = getEcsDropdownLists();
-            return lists[0] ? lists[0].options : defaultCodeStatusOptions;
+        function getEcsListByRole(role) {
+            return getEcsDropdownLists().find(list => list.role === role) || null;
         }
 
-        // Get current comment options (derived from second dropdown list)
+        function getStatusList() {
+            return getEcsListByRole('status');
+        }
+
+        function getCommentList() {
+            return getEcsListByRole('comment');
+        }
+
+        function getEcsExtraLists() {
+            return getEcsDropdownLists().filter(list => list.role === 'extra');
+        }
+
+        function getStatusListName() {
+            const list = getStatusList();
+            return list && list.name ? list.name : 'Status';
+        }
+
+        function getCommentListName() {
+            const list = getCommentList();
+            return list && list.name ? list.name : 'Comment';
+        }
+
+        function getStatusPrompt() {
+            return `Select ${getStatusListName()}...`;
+        }
+
+        // Get current status options from the stable Status role.
+        function getCodeStatusOptions() {
+            const list = getStatusList();
+            return list ? list.options : defaultCodeStatusOptions;
+        }
+
+        // Get current comment options from the stable Comment role.
         function getCommentOptions() {
-            const lists = getEcsDropdownLists();
-            return lists[1] ? lists[1].options : defaultCommentOptions;
+            const list = getCommentList();
+            return list ? list.options : defaultCommentOptions;
         }
 
         // Returns true if the user has a Comment dropdown list defined.
@@ -4182,19 +4498,11 @@ rooms: [],
         //   • generateCodeCheckItems        (ECS check page, list view)
         //   • buildConfirmedRow             (ECS check page, Quick Entry view)
         function hasCommentList() {
-            const lists = getEcsDropdownLists();
-            return !!(lists && lists[1]);
+            return !!getCommentList();
         }
 
-        // Returns the Comment list object (lists[1]) so build sites can read
-        // its .name (used as the column label) and .type ('select' or 'text').
-        // Callers must guard with hasCommentList() first.
-        function getCommentList() {
-            return getEcsDropdownLists()[1];
-        }
-
-        // Renders the "extra" dropdown list columns (lists[2], lists[3], …)
-        // for a single ECS code row, and appends them to controlsRow.
+        // Renders every configured list for a single ECS code row and appends
+        // it to controlsRow in visual order.
         //
         // Used by both the List view (generateCodeCheckItems) and the
         // Search/Quick Entry view (buildConfirmedRow). Without this shared
@@ -4209,12 +4517,20 @@ rooms: [],
         //   data-role="extra-btn-${list.id}"      (dropdown button)
         //   data-role="extra-options-${list.id}"  (dropdown options panel)
         //   data-role="extra-text" + data-list-id + data-code-id (text input)
-        function appendEcsExtraListColumns(controlsRow, uniqueCodeId) {
+        function appendEcsExtraListColumns(controlsRow, uniqueCodeId, roleControls = {}) {
             const allLists = getEcsDropdownLists();
-            if (allLists.length <= 2) return;
 
             if (!appState.ecsExtraData) appState.ecsExtraData = {};
-            allLists.slice(2).forEach(list => {
+            allLists.forEach(list => {
+                if (list.role === 'status') {
+                    if (roleControls.status) controlsRow.appendChild(roleControls.status);
+                    return;
+                }
+                if (list.role === 'comment') {
+                    if (roleControls.comment) controlsRow.appendChild(roleControls.comment);
+                    return;
+                }
+
                 if (!appState.ecsExtraData[list.id]) appState.ecsExtraData[list.id] = {};
                 const extraWrapper = document.createElement('div');
                 extraWrapper.className = 'control-wrapper';
@@ -4391,6 +4707,13 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('downloadJsonCodeCheckPage').addEventListener('click', downloadJsonData);
             document.getElementById('shareCodeCheckPage').addEventListener('click', showShareModal);
             document.getElementById('backToCodeInput').addEventListener('click', backToCodeInput);
+            document.getElementById('openEcsBulkSelection').addEventListener('click', showEcsBulkSelectionModal);
+            document.getElementById('ecsBulkSelectionClose').addEventListener('click', hideEcsBulkSelectionModal);
+            document.getElementById('ecsBulkSearch').addEventListener('input', renderEcsBulkSelectionResults);
+            document.getElementById('ecsBulkApply').addEventListener('click', applyEcsBulkSelections);
+            document.getElementById('ecsBulkSelectionModal').addEventListener('click', function(event) {
+                if (event.target.id === 'ecsBulkSelectionModal') hideEcsBulkSelectionModal();
+            });
             document.getElementById('openEcsGlobalSearchDesktop').addEventListener('click', showEcsGlobalSearchModal);
             document.getElementById('openEcsGlobalSearchMobile').addEventListener('click', showEcsGlobalSearchModal);
             document.getElementById('ecsGlobalSearchClose').addEventListener('click', hideEcsGlobalSearchModal);
@@ -4400,6 +4723,10 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 if (event.target.id === 'ecsGlobalSearchModal') hideEcsGlobalSearchModal();
             });
             document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && document.getElementById('ecsBulkSelectionModal').classList.contains('active')) {
+                    hideEcsBulkSelectionModal();
+                    return;
+                }
                 if (event.key === 'Escape' && document.getElementById('ecsGlobalSearchModal').classList.contains('active')) {
                     hideEcsGlobalSearchModal();
                 }
@@ -4503,7 +4830,9 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('addEcsDropdownList').addEventListener('click', function() {
                 const lists = getEcsDropdownLists();
                 const newId = 'list-extra-' + Date.now();
-                lists.push({ id: newId, name: 'New List', type: 'select', options: ['Option 1'] });
+                const role = !lists.some(list => list.role === 'status') ? 'status' :
+                    (!lists.some(list => list.role === 'comment') ? 'comment' : 'extra');
+                lists.push({ id: newId, role, name: 'New List', type: 'select', options: ['Option 1'] });
                 if (!appState.ecsExtraData) appState.ecsExtraData = {};
                 appState.ecsExtraData[newId] = {};
                 saveDataToStorage();
@@ -4679,8 +5008,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
 
         // Dropdown Editor Functions
         // ── ECS Dropdown List Management ──────────────────────────────────────
-        // appState.ecsDropdownLists = [ {id, name, options:[]} , ... ]
-        // The first list is the "Status" column; additional lists add extra columns.
+        // appState.ecsDropdownLists = [ {id, role, name, type, options:[]} , ... ]
+        // Status and Comment behavior follows role; array order controls visual order.
         // appState.ecsExtraData = { listId: { uniqueCodeId: value } }
 
 
@@ -4696,11 +5025,148 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 const commentOpts = (Array.isArray(appState.customCommentOptions) && appState.customCommentOptions.length)
                     ? appState.customCommentOptions : [...defaultCommentOptions];
                 appState.ecsDropdownLists = [
-                    { id: 'list-status',  name: 'Status',  type: 'select', options: statusOpts  },
-                    { id: 'list-comment', name: 'Comment', type: 'select', options: commentOpts }
+                    { id: 'list-status',  role: 'status',  name: 'Status',  type: 'select', options: statusOpts  },
+                    { id: 'list-comment', role: 'comment', name: 'Comment', type: 'select', options: commentOpts }
                 ];
             }
+            normalizeEcsListRoles(appState.ecsDropdownLists, false);
             return appState.ecsDropdownLists;
+        }
+
+        function normalizeEcsListRoles(lists, useLegacyPositions) {
+            if (!Array.isArray(lists)) return;
+
+            lists.forEach(list => {
+                if (!list || typeof list !== 'object') return;
+                if (!Array.isArray(list.options)) list.options = [];
+                if (!list.type) list.type = 'select';
+                if (typeof list.name !== 'string') list.name = 'New List';
+            });
+
+            const statusList = lists.find(list => list.id === 'list-status') ||
+                lists.find(list => list.role === 'status') ||
+                (useLegacyPositions ? lists[0] : null);
+            const commentList = lists.find(list => list.id === 'list-comment') ||
+                lists.find(list => list.role === 'comment') ||
+                (useLegacyPositions ? lists.find((list, index) => index === 1 && list !== statusList) : null);
+
+            lists.forEach(list => { list.role = 'extra'; });
+            if (statusList) {
+                statusList.role = 'status';
+                statusList.type = 'select';
+            }
+            if (commentList && commentList !== statusList) commentList.role = 'comment';
+        }
+
+        function getEcsCodeIds(roomCodes) {
+            const ids = [];
+            Object.entries(roomCodes || {}).forEach(([room, codes]) => {
+                (codes || []).forEach(code => ids.push(`${room}-${code}`));
+            });
+            return ids;
+        }
+
+        function migrateLegacyEcsListStorage(lists) {
+            if (!Array.isArray(lists) || lists.length === 0) return;
+
+            const oldStatuses = { ...(appState.checkData || {}) };
+            const oldComments = { ...(appState.codeSpecificComments || {}) };
+            const oldExtras = {};
+            lists.forEach(list => {
+                oldExtras[list.id] = { ...((appState.ecsExtraData || {})[list.id] || {}) };
+                if (!appState.ecsExtraData[list.id]) appState.ecsExtraData[list.id] = {};
+            });
+
+            getEcsCodeIds(appState.roomCodes).forEach(codeId => {
+                const valuesByListId = {};
+                lists.forEach((list, index) => {
+                    if (index === 0) {
+                        const optionIndex = oldStatuses[codeId];
+                        valuesByListId[list.id] = Number.isInteger(optionIndex) ? (list.options[optionIndex] || '') : '';
+                    } else if (index === 1) {
+                        valuesByListId[list.id] = oldComments[codeId] || '';
+                    } else {
+                        valuesByListId[list.id] = oldExtras[list.id][codeId] || '';
+                    }
+                });
+
+                appState.checkData[codeId] = null;
+                appState.codeSpecificComments[codeId] = '';
+                lists.forEach(list => { delete appState.ecsExtraData[list.id][codeId]; });
+
+                lists.forEach(list => {
+                    const value = valuesByListId[list.id] || '';
+                    if (list.role === 'status') {
+                        const optionIndex = list.options.indexOf(value);
+                        appState.checkData[codeId] = optionIndex >= 0 ? optionIndex : null;
+                    } else if (list.role === 'comment') {
+                        appState.codeSpecificComments[codeId] = value;
+                    } else if (value) {
+                        appState.ecsExtraData[list.id][codeId] = value;
+                    }
+                });
+            });
+
+            const at = appState.assetTagz2 || {};
+            const oldAtStatuses = { ...(at.statusByCodeId || {}) };
+            const oldAtComments = { ...(at.commentsByCodeId || {}) };
+            getEcsCodeIds(at.roomCodes).forEach(codeId => {
+                const valuesByListId = {};
+                if (lists[0]) {
+                    const optionIndex = oldAtStatuses[codeId];
+                    valuesByListId[lists[0].id] = Number.isInteger(optionIndex) ? (lists[0].options[optionIndex] || '') : '';
+                }
+                if (lists[1]) valuesByListId[lists[1].id] = oldAtComments[codeId] || '';
+
+                at.statusByCodeId[codeId] = null;
+                at.commentsByCodeId[codeId] = '';
+                lists.slice(0, 2).forEach(list => {
+                    const value = valuesByListId[list.id] || '';
+                    if (list.role === 'status') {
+                        const optionIndex = list.options.indexOf(value);
+                        at.statusByCodeId[codeId] = optionIndex >= 0 ? optionIndex : null;
+                    } else if (list.role === 'comment') {
+                        at.commentsByCodeId[codeId] = value;
+                    }
+                });
+            });
+        }
+
+        function updateStoredStatusIndexes(mapper) {
+            getEcsCodeIds(appState.roomCodes).forEach(codeId => {
+                const current = appState.checkData[codeId];
+                if (Number.isInteger(current)) appState.checkData[codeId] = mapper(current);
+            });
+
+            const at = appState.assetTagz2 || {};
+            Object.keys(at.statusByCodeId || {}).forEach(codeId => {
+                const current = at.statusByCodeId[codeId];
+                if (Number.isInteger(current)) at.statusByCodeId[codeId] = mapper(current);
+            });
+        }
+
+        function remapStatusIndexForMove(current, fromIndex, toIndex) {
+            if (current === fromIndex) return toIndex;
+            if (fromIndex < toIndex && current > fromIndex && current <= toIndex) return current - 1;
+            if (fromIndex > toIndex && current >= toIndex && current < fromIndex) return current + 1;
+            return current;
+        }
+
+        function remapStatusIndexForRemoval(current, removedIndex) {
+            if (current === removedIndex) return null;
+            return current > removedIndex ? current - 1 : current;
+        }
+
+        function clearEcsRoleData(role) {
+            if (role === 'status') {
+                getEcsCodeIds(appState.roomCodes).forEach(codeId => { appState.checkData[codeId] = null; });
+                const at = appState.assetTagz2 || {};
+                Object.keys(at.statusByCodeId || {}).forEach(codeId => { at.statusByCodeId[codeId] = null; });
+            } else if (role === 'comment') {
+                getEcsCodeIds(appState.roomCodes).forEach(codeId => { appState.codeSpecificComments[codeId] = ''; });
+                const at = appState.assetTagz2 || {};
+                Object.keys(at.commentsByCodeId || {}).forEach(codeId => { at.commentsByCodeId[codeId] = ''; });
+            }
         }
 
         // Render the full editor: one collapsible card per list + add/delete list controls
@@ -4798,6 +5264,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 typeCheckbox.type = 'checkbox';
                 typeCheckbox.style.cssText = 'position:absolute;opacity:0;width:0;height:0;';
                 typeCheckbox.checked = (list.type === 'text');
+                typeCheckbox.disabled = list.role === 'status';
+                if (list.role === 'status') typeToggle.title = 'Status must remain a dropdown';
 
                 const typeTrack = document.createElement('span');
                 typeTrack.className = 'ecs-ios-toggle-track';
@@ -4826,7 +5294,12 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                         return;
                     }
                     appState.ecsDropdownLists.splice(listIdx, 1);
-                    if (appState.ecsExtraData) delete appState.ecsExtraData[list.id];
+                    if (list.role === 'extra') {
+                        if (appState.ecsExtraData) delete appState.ecsExtraData[list.id];
+                    } else {
+                        clearEcsRoleData(list.role);
+                        if (appState.ecsExtraData) delete appState.ecsExtraData[list.id];
+                    }
                     saveDataToStorage();
                     renderEcsDropdownListsEditor();
                 });
@@ -4882,6 +5355,9 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                             const fromOpt = dragSrcOptIdx;
                             const toOpt   = optIdx;
                             if (fromOpt === null || fromOpt === toOpt) return;
+                            if (list.role === 'status') {
+                                updateStoredStatusIndexes(current => remapStatusIndexForMove(current, fromOpt, toOpt));
+                            }
                             const moved = list.options.splice(fromOpt, 1)[0];
                             list.options.splice(toOpt, 0, moved);
                             saveDataToStorage();
@@ -4917,6 +5393,9 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                             if (list.options.length <= 1) {
                                 showMessageModal('Cannot Remove', 'At least one option must remain in each list.');
                                 return;
+                            }
+                            if (list.role === 'status') {
+                                updateStoredStatusIndexes(current => remapStatusIndexForRemoval(current, optIdx));
                             }
                             list.options.splice(optIdx, 1);
                             saveDataToStorage();
@@ -4992,14 +5471,16 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     el.appendChild(item);
                 });
                 el.querySelectorAll('.dropdown-editor-input[data-list="status"]').forEach(inp => inp.addEventListener('input', e => {
-                    const lists = getEcsDropdownLists();
-                    if (lists[0]) { lists[0].options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
+                    const list = getStatusList();
+                    if (list) { list.options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
                 }));
                 el.querySelectorAll('.dropdown-editor-btn.remove[data-list="status"]').forEach(btn => btn.addEventListener('click', e => {
-                    const lists = getEcsDropdownLists();
-                    if (!lists[0]) return;
-                    if (lists[0].options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
-                    lists[0].options.splice(parseInt(e.target.dataset.index), 1);
+                    const list = getStatusList();
+                    if (!list) return;
+                    if (list.options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
+                    const removedIndex = parseInt(e.target.dataset.index);
+                    updateStoredStatusIndexes(current => remapStatusIndexForRemoval(current, removedIndex));
+                    list.options.splice(removedIndex, 1);
                     saveDataToStorage();
                     renderDropdownEditor(elementId);
                 }));
@@ -5025,14 +5506,14 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                     el.appendChild(item);
                 });
                 el.querySelectorAll('.dropdown-editor-input[data-list="comment"]').forEach(inp => inp.addEventListener('input', e => {
-                    const lists = getEcsDropdownLists();
-                    if (lists[1]) { lists[1].options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
+                    const list = getCommentList();
+                    if (list) { list.options[parseInt(e.target.dataset.index)] = e.target.value; saveDataToStorage(); }
                 }));
                 el.querySelectorAll('.dropdown-editor-btn.remove-comment[data-list="comment"]').forEach(btn => btn.addEventListener('click', e => {
-                    const lists = getEcsDropdownLists();
-                    if (!lists[1]) return;
-                    if (lists[1].options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
-                    lists[1].options.splice(parseInt(e.target.dataset.index), 1);
+                    const list = getCommentList();
+                    if (!list) return;
+                    if (list.options.length <= 1) { showMessageModal('Cannot Remove', 'At least one option must remain.'); return; }
+                    list.options.splice(parseInt(e.target.dataset.index), 1);
                     saveDataToStorage();
                     renderCommentDropdownEditor(elementId);
                 }));
@@ -5046,12 +5527,12 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
         // ============================================================================
 
         function addDropdownOption() {
-            const lists = getEcsDropdownLists();
-            if (lists[0]) { lists[0].options.push('New Option'); saveDataToStorage(); renderEcsDropdownListsEditor(); renderDropdownEditor('assetTagz2DropdownEditorList'); }
+            const list = getStatusList();
+            if (list) { list.options.push('New Option'); saveDataToStorage(); renderEcsDropdownListsEditor(); renderDropdownEditor('assetTagz2DropdownEditorList'); }
         }
         function addCommentDropdownOption() {
-            const lists = getEcsDropdownLists();
-            if (lists[1]) { lists[1].options.push('New Comment'); saveDataToStorage(); renderCommentDropdownEditor('assetTagz2CommentDropdownEditorList'); }
+            const list = getCommentList();
+            if (list) { list.options.push('New Comment'); saveDataToStorage(); renderCommentDropdownEditor('assetTagz2CommentDropdownEditorList'); }
         }
 
 
@@ -5280,7 +5761,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             } catch (error) {
                 console.error('Failed to load data:', error);
             } finally {
-                normalizeAppState();
+                if (normalizeAppState()) saveDataToStorage();
             }
         }
 
@@ -5289,6 +5770,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
          * This is important because imported / saved JSON may miss nested defaults.
          */
         function normalizeAppState() {
+            let migratedEcsRoles = false;
             // Ensure top-level containers exist
             appState = appState || {};
             appState.rooms = Array.isArray(appState.rooms) ? appState.rooms : [];
@@ -5304,8 +5786,8 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             appState.customStatusOptions = Array.isArray(appState.customStatusOptions) ? appState.customStatusOptions : [];
             appState.customCommentOptions = Array.isArray(appState.customCommentOptions) ? appState.customCommentOptions : [];
             if (!Array.isArray(appState.ecsDropdownLists)) appState.ecsDropdownLists = [];
-            // Ensure every list has a type field (backwards compat with saves before type was added)
-            appState.ecsDropdownLists.forEach(l => { if (!l.type) l.type = 'select'; });
+            const legacyEcsRoles = !Number.isInteger(appState.ecsListRoleVersion) || appState.ecsListRoleVersion < 2;
+            normalizeEcsListRoles(appState.ecsDropdownLists, legacyEcsRoles);
             if (!appState.ecsExtraData || typeof appState.ecsExtraData !== 'object') appState.ecsExtraData = {};
             if (typeof appState.ecsQuickEntryMode !== 'boolean') appState.ecsQuickEntryMode = false;
             if (!appState.ecsQuickEntryState || typeof appState.ecsQuickEntryState !== 'object') appState.ecsQuickEntryState = {};
@@ -5322,6 +5804,12 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             at.barcodePool = Array.isArray(at.barcodePool) ? at.barcodePool : null;
             at.barcodePoolTotal = (typeof at.barcodePoolTotal === 'number') ? at.barcodePoolTotal : (at.barcodePresets.length || 0);
 
+            if (legacyEcsRoles) {
+                migrateLegacyEcsListStorage(appState.ecsDropdownLists);
+                appState.ecsListRoleVersion = 2;
+                migratedEcsRoles = true;
+            }
+
             // Flexible tracking nested defaults (if present)
             if (appState.flexibleInspections && typeof appState.flexibleInspections === 'object') {
                 const flex = appState.flexibleInspections;
@@ -5332,6 +5820,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
                 flex.locks = (flex.locks && typeof flex.locks === 'object') ? flex.locks : {};
                 flex.ecsPresets = Array.isArray(flex.ecsPresets) ? flex.ecsPresets : [];
             }
+            return migratedEcsRoles;
         }
 
         function refreshUIFromState() {
@@ -6151,12 +6640,12 @@ if (presets.length) {
 
                 const statusLabel = document.createElement('div');
                 statusLabel.className = 'control-label';
-                statusLabel.textContent = 'Status';
+                statusLabel.textContent = getStatusListName();
                 statusWrapper.appendChild(statusLabel);
 
                 const statusButton = document.createElement('button');
                 statusButton.className = 'status-button';
-                statusButton.textContent = 'Select Status';
+                statusButton.textContent = getStatusPrompt();
                 statusButton.dataset.codeId = codeId;
                 statusButton.addEventListener('click', toggleAssetTagz2StatusOptions);
                 statusWrapper.appendChild(statusButton);
@@ -6179,7 +6668,6 @@ if (presets.length) {
                 });
 
                 statusWrapper.appendChild(statusOptions);
-                controlsRow.appendChild(statusWrapper);
 
                 // Comment column — only built when the user has a Comment
                 // dropdown list defined in the editor. If they deleted it,
@@ -6190,13 +6678,14 @@ if (presets.length) {
                 //   • 'select' (default) → dropdown with options + Custom… + textarea
                 //   • 'text'             → plain text input (no dropdown)
                 // Storage is unchanged either way (appState.assetTagz2.commentsByCodeId).
+                let commentWrapper = null;
                 if (hasCommentList()) {
                     const commentList = getCommentList();
                     const commentLabelText = commentList.name || 'Comment';
                     const commentIsText = commentList.type === 'text';
 
                     // Comment wrapper — button+options style matching ECS
-                    const commentWrapper = document.createElement('div');
+                    commentWrapper = document.createElement('div');
                     commentWrapper.className = 'control-wrapper comment-section';
                     commentWrapper.style.position = 'relative';
 
@@ -6272,8 +6761,12 @@ if (presets.length) {
 
                         commentWrapper.appendChild(customInput);
                     }
-                    controlsRow.appendChild(commentWrapper);
                 }
+
+                getEcsDropdownLists().forEach(list => {
+                    if (list.role === 'status') controlsRow.appendChild(statusWrapper);
+                    if (list.role === 'comment' && commentWrapper) controlsRow.appendChild(commentWrapper);
+                });
 
                 // Barcode wrapper (NEW) - to the right of Comment
                 const barcodeWrapper = document.createElement('div');
@@ -6351,14 +6844,14 @@ barcodeWrapper.appendChild(barcodeInput);
             const statusIndex = event.target.dataset.statusIndex;
             const statusText = event.target.textContent;
 
-            const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button[data-code-id="${codeId}"]`);
+            const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button:not([data-role])[data-code-id="${codeId}"]`);
             const statusOptions = event.target.closest('.status-options');
 
             if (statusIndex === '__clear__') {
                 // Clear the selection
                 at.statusByCodeId[codeId] = null;
                 if (statusButton) {
-                    statusButton.textContent = 'Select Status';
+                    statusButton.textContent = getStatusPrompt();
                     statusButton.classList.remove('selected');
                 }
                 if (statusOptions) statusOptions.classList.remove('active');
@@ -6459,13 +6952,13 @@ barcodeWrapper.appendChild(barcodeInput);
                 const barcode = at.barcodesByCodeId[codeId] || '';
 
                 // Restore status button
-                const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button[data-code-id="${codeId}"]`);
+                const statusButton = document.querySelector(`#assetTagz2ChecksContainer .status-button:not([data-role])[data-code-id="${codeId}"]`);
                 if (statusButton) {
                     if (statusIndex !== null && statusIndex !== undefined) {
                         statusButton.textContent = codeStatusOptions[statusIndex];
                         statusButton.classList.add('selected');
                     } else {
-                        statusButton.textContent = 'Select Status';
+                        statusButton.textContent = getStatusPrompt();
                         statusButton.classList.remove('selected');
                     }
                 }
@@ -6540,7 +7033,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 const at = appState.assetTagz2 || {};
                 const rc = at.roomCodes || {};
                 const codeStatusOptions = getCodeStatusOptions();
-                let csvContent = 'Room,Code,Status,Comment,Barcode\n';
+                let csvContent = `Room,Code,"${getStatusListName().replace(/"/g, '""')}","${getCommentListName().replace(/"/g, '""')}",Barcode\n`;
 
                 for (const room in rc) {
                     (rc[room] || []).forEach(code => {
@@ -6695,12 +7188,12 @@ barcodeWrapper.appendChild(barcodeInput);
                 
                 const statusLabel = document.createElement('div');
                 statusLabel.className = 'control-label';
-                statusLabel.textContent = 'Status';
+                statusLabel.textContent = getStatusListName();
                 statusWrapper.appendChild(statusLabel);
 
                 const statusButton = document.createElement('button');
                 statusButton.className = 'status-button';
-                statusButton.textContent = 'Select Status';
+                statusButton.textContent = getStatusPrompt();
                 statusButton.dataset.codeId = uniqueCodeId;
                 statusButton.addEventListener('click', toggleStatusOptions);
                 statusWrapper.appendChild(statusButton);
@@ -6723,7 +7216,6 @@ barcodeWrapper.appendChild(barcodeInput);
                 });
                 
                 statusWrapper.appendChild(statusOptions);
-                controlsRow.appendChild(statusWrapper);
 
                 // Comment column — only built when the user has a Comment
                 // dropdown list defined in the editor. If they deleted it,
@@ -6734,13 +7226,14 @@ barcodeWrapper.appendChild(barcodeInput);
                 //   • 'select' (default) → dropdown with options + Custom… + textarea
                 //   • 'text'             → plain text input (no dropdown)
                 // Storage is unchanged either way (appState.codeSpecificComments).
+                let commentWrapper = null;
                 if (hasCommentList()) {
                     const commentList = getCommentList();
                     const commentLabelText = commentList.name || 'Comment';
                     const commentIsText = commentList.type === 'text';
 
                     // Comment wrapper — styled identically to the Status button
-                    const commentWrapper = document.createElement('div');
+                    commentWrapper = document.createElement('div');
                     commentWrapper.className = 'control-wrapper comment-section';
                     commentWrapper.style.position = 'relative';
 
@@ -6820,12 +7313,14 @@ barcodeWrapper.appendChild(barcodeInput);
 
                         commentWrapper.appendChild(customInput);
                     }
-                    controlsRow.appendChild(commentWrapper);
                 }
 
-                // ── Extra dropdown lists (lists[2], lists[3], …) ──────────────
-                // Shared with buildConfirmedRow (Search/Quick Entry view)
-                appendEcsExtraListColumns(controlsRow, uniqueCodeId);
+                // Append every configured list in its visual editor order.
+                // Shared with buildConfirmedRow (Search/Quick Entry view).
+                appendEcsExtraListColumns(controlsRow, uniqueCodeId, {
+                    status: statusWrapper,
+                    comment: commentWrapper
+                });
 
                 controlsCell.appendChild(controlsRow);
                 rowDiv.appendChild(controlsCell);
@@ -6979,17 +7474,17 @@ barcodeWrapper.appendChild(barcodeInput);
 
             const statusLabel = document.createElement('div');
             statusLabel.className = 'control-label';
-            statusLabel.textContent = 'Status';
+            statusLabel.textContent = getStatusListName();
             statusWrapper.appendChild(statusLabel);
 
             const statusButton = document.createElement('button');
             statusButton.className = 'status-button';
             statusButton.dataset.codeId = uniqueCodeId;
             if (savedStatusIndex !== null && savedStatusIndex !== undefined) {
-                statusButton.textContent = codeStatusOptions[savedStatusIndex] || 'Select Status';
+                statusButton.textContent = codeStatusOptions[savedStatusIndex] || getStatusPrompt();
                 statusButton.classList.add('selected');
             } else {
-                statusButton.textContent = 'Select Status';
+                statusButton.textContent = getStatusPrompt();
             }
             statusButton.addEventListener('click', toggleStatusOptions);
             statusWrapper.appendChild(statusButton);
@@ -7009,7 +7504,6 @@ barcodeWrapper.appendChild(barcodeInput);
                 statusOptionsDiv.appendChild(opt);
             });
             statusWrapper.appendChild(statusOptionsDiv);
-            controlsRow.appendChild(statusWrapper);
 
             // Comment column — only built when the user has a Comment
             // dropdown list defined in the editor. If they deleted it,
@@ -7021,12 +7515,13 @@ barcodeWrapper.appendChild(barcodeInput);
             //                          (preserves "saved choice" / "Custom…" state)
             //   • 'text'             → plain text input pre-filled with savedComment
             // Storage is unchanged either way (appState.codeSpecificComments).
+            let commentWrapper = null;
             if (hasCommentList()) {
                 const commentList = getCommentList();
                 const commentLabelText = commentList.name || 'Comment';
                 const commentIsText = commentList.type === 'text';
 
-                const commentWrapper = document.createElement('div');
+                commentWrapper = document.createElement('div');
                 commentWrapper.className = 'control-wrapper comment-section';
                 commentWrapper.style.position = 'relative';
 
@@ -7115,14 +7610,14 @@ barcodeWrapper.appendChild(barcodeInput);
 
                     commentWrapper.appendChild(customInput);
                 }
-                controlsRow.appendChild(commentWrapper);
             }
 
-            // ── Extra dropdown lists (lists[2], lists[3], …) ──────────────
-            // Shared with generateCodeCheckItems (List view). Without this
-            // call the Search/Quick Entry view did not show user-defined
-            // extra lists at all.
-            appendEcsExtraListColumns(controlsRow, uniqueCodeId);
+            // Shared with generateCodeCheckItems (List view), including
+            // user-defined extra lists.
+            appendEcsExtraListColumns(controlsRow, uniqueCodeId, {
+                status: statusWrapper,
+                comment: commentWrapper
+            });
 
             row.appendChild(controlsRow);
 
@@ -7170,6 +7665,12 @@ barcodeWrapper.appendChild(barcodeInput);
             const suggestions = document.createElement('div');
             suggestions.className = 'ecs-suggestions';
 
+            function setSuggestionsOpen(open) {
+                suggestions.classList.toggle('open', open);
+                const codeCheckPage = document.getElementById('codeCheckPage');
+                if (codeCheckPage) codeCheckPage.classList.toggle('ecs-inline-search-active', open);
+            }
+
             searchWrap.appendChild(input);
             searchWrap.appendChild(clearBtn);
             searchWrap.appendChild(suggestions);
@@ -7190,7 +7691,7 @@ barcodeWrapper.appendChild(barcodeInput);
                     : available;
 
                 if (matches.length === 0) {
-                    suggestions.classList.remove('open');
+                    setSuggestionsOpen(false);
                     return;
                 }
 
@@ -7220,7 +7721,7 @@ barcodeWrapper.appendChild(barcodeInput);
                     suggestions.appendChild(item);
                 });
 
-                suggestions.classList.add('open');
+                setSuggestionsOpen(true);
             }
 
             function escapeHtml(str) {
@@ -7284,7 +7785,7 @@ barcodeWrapper.appendChild(barcodeInput);
             input.addEventListener('blur', () => {
                 // Delay so mousedown on suggestion fires before blur closes the list
                 setTimeout(() => {
-                    suggestions.classList.remove('open');
+                    setSuggestionsOpen(false);
                 }, 150);
             });
 
@@ -7303,7 +7804,7 @@ barcodeWrapper.appendChild(barcodeInput);
                         else input.classList.add('no-match');
                     }
                 } else if (e.key === 'Escape') {
-                    suggestions.classList.remove('open');
+                    setSuggestionsOpen(false);
                 }
             });
 
@@ -7311,14 +7812,14 @@ barcodeWrapper.appendChild(barcodeInput);
                 input.value = '';
                 clearBtn.classList.remove('visible');
                 input.classList.remove('matched', 'no-match');
-                suggestions.classList.remove('open');
+                setSuggestionsOpen(false);
                 input.focus();
             });
 
             // Close suggestions on outside click — remove listener when suggestions close
             const closeSugg = (e) => {
                 if (!row.contains(e.target)) {
-                    suggestions.classList.remove('open');
+                    setSuggestionsOpen(false);
                     document.removeEventListener('click', closeSugg);
                 }
             };
@@ -7326,6 +7827,7 @@ barcodeWrapper.appendChild(barcodeInput);
             // Also remove if the row itself is removed from the DOM (re-render)
             const observer = new MutationObserver(() => {
                 if (!document.body.contains(row)) {
+                    setSuggestionsOpen(false);
                     document.removeEventListener('click', closeSugg);
                     observer.disconnect();
                 }
@@ -7403,7 +7905,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 // Clear the selection
                 appState.checkData[codeId] = null;
                 if (statusButton) {
-                    statusButton.textContent = 'Select Status';
+                    statusButton.textContent = getStatusPrompt();
                     statusButton.classList.remove('selected');
                 }
                 // Remove camera button if no status AND no comment remain
@@ -7627,8 +8129,7 @@ barcodeWrapper.appendChild(barcodeInput);
             const codesForCurrentRoom = appState.roomCodes[currentRoomName] || [];
             const codeStatusOptions = getCodeStatusOptions();
             const commentOptions = getCommentOptions();
-            const allLists = getEcsDropdownLists();
-            const extraLists = allLists.slice(2);
+            const extraLists = getEcsExtraLists();
 
             codesForCurrentRoom.forEach(code => {
                 const uniqueCodeId = `${currentRoomName}-${code}`;
@@ -7636,13 +8137,13 @@ barcodeWrapper.appendChild(barcodeInput);
                 const comment = appState.codeSpecificComments[uniqueCodeId] || '';
 
                 // Update status button
-                const statusButton = document.querySelector(`.status-button[data-code-id="${uniqueCodeId}"]`);
+                const statusButton = document.querySelector(`.status-button:not([data-role])[data-code-id="${uniqueCodeId}"]`);
                 if (statusButton) {
                     if (statusIndex !== null && statusIndex !== undefined) {
                         statusButton.textContent = codeStatusOptions[statusIndex];
                         statusButton.classList.add('selected');
                     } else {
-                        statusButton.textContent = 'Select Status';
+                        statusButton.textContent = getStatusPrompt();
                         statusButton.classList.remove('selected');
                     }
                 }
@@ -7703,6 +8204,264 @@ barcodeWrapper.appendChild(barcodeInput);
                     }
                 });
             });
+        }
+
+
+        // ── ECS Bulk / Multiple Selection ───────────────────────────────────
+        // Selection is intentionally kept outside appState because it is only a
+        // temporary UI choice. Saved inspection values continue to use the same
+        // Status, Comment and extra-list maps as normal ECS entry.
+        const ecsBulkSelectedCodeIds = new Set();
+
+        function ecsCodeHasAnyAssignedValue(codeId) {
+            const statusValue = appState.checkData ? appState.checkData[codeId] : null;
+            if (statusValue !== null && statusValue !== undefined) return true;
+
+            const commentValue = appState.codeSpecificComments ? appState.codeSpecificComments[codeId] : '';
+            if (String(commentValue || '').trim()) return true;
+
+            const lists = getEcsDropdownLists();
+            return lists.some(list => {
+                if (list.role === 'status' || list.role === 'comment') return false;
+                const value = appState.ecsExtraData && appState.ecsExtraData[list.id]
+                    ? appState.ecsExtraData[list.id][codeId]
+                    : '';
+                return String(value || '').trim() !== '';
+            });
+        }
+
+        function getEcsBulkEligibleTargets() {
+            const roomName = getCurrentEcsRoomName();
+            const codes = (appState.roomCodes && appState.roomCodes[roomName]) || [];
+            return codes
+                .map(code => ({
+                    roomName,
+                    ecsCode: String(code || ''),
+                    codeId: `${roomName}-${code}`
+                }))
+                .filter(target => target.ecsCode && !ecsCodeHasAnyAssignedValue(target.codeId));
+        }
+
+        function getEcsBulkSelectableLists() {
+            return getEcsDropdownLists().filter(list =>
+                list.type !== 'text' && Array.isArray(list.options) && list.options.some(option => String(option || '').trim())
+            );
+        }
+
+        function renderEcsBulkListControls() {
+            const container = document.getElementById('ecsBulkListControls');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const lists = getEcsBulkSelectableLists();
+            if (!lists.length) {
+                const empty = document.createElement('div');
+                empty.className = 'ecs-bulk-empty';
+                empty.textContent = 'No dropdown lists with selectable values are configured.';
+                empty.style.gridColumn = '1 / -1';
+                container.appendChild(empty);
+                updateEcsBulkApplyState();
+                return;
+            }
+
+            lists.forEach(list => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'ecs-bulk-control';
+
+                const label = document.createElement('label');
+                label.setAttribute('for', `ecs-bulk-list-${list.id}`);
+                label.textContent = list.name || 'List';
+
+                const select = document.createElement('select');
+                select.id = `ecs-bulk-list-${list.id}`;
+                select.className = 'ecs-bulk-select';
+                select.dataset.listId = list.id;
+                select.dataset.listRole = list.role || 'extra';
+
+                const blank = document.createElement('option');
+                blank.value = '';
+                blank.textContent = 'Do not change';
+                select.appendChild(blank);
+
+                list.options.forEach((option, optionIndex) => {
+                    const optionText = String(option || '').trim();
+                    if (!optionText) return;
+                    const optionEl = document.createElement('option');
+                    optionEl.value = String(optionIndex);
+                    optionEl.textContent = optionText;
+                    select.appendChild(optionEl);
+                });
+
+                select.addEventListener('change', updateEcsBulkApplyState);
+                wrapper.appendChild(label);
+                wrapper.appendChild(select);
+                container.appendChild(wrapper);
+            });
+
+            updateEcsBulkApplyState();
+        }
+
+        function renderEcsBulkSelectionResults() {
+            const results = document.getElementById('ecsBulkResults');
+            const eligibleCount = document.getElementById('ecsBulkEligibleCount');
+            if (!results || !eligibleCount) return;
+
+            const eligibleTargets = getEcsBulkEligibleTargets();
+            const eligibleIds = new Set(eligibleTargets.map(target => target.codeId));
+            [...ecsBulkSelectedCodeIds].forEach(codeId => {
+                if (!eligibleIds.has(codeId)) ecsBulkSelectedCodeIds.delete(codeId);
+            });
+
+            const queryInput = document.getElementById('ecsBulkSearch');
+            const q = normalizeEcsSearchValue(queryInput ? queryInput.value : '');
+            const compactQ = compactEcsSearchValue(queryInput ? queryInput.value : '');
+            const visibleTargets = eligibleTargets.filter(target => {
+                if (!q && !compactQ) return true;
+                const codeLower = normalizeEcsSearchValue(target.ecsCode);
+                const codeCompact = compactEcsSearchValue(target.ecsCode);
+                return codeLower.includes(q) || (compactQ && codeCompact.includes(compactQ));
+            });
+
+            eligibleCount.textContent = `${eligibleTargets.length} available`;
+            results.innerHTML = '';
+
+            if (!visibleTargets.length) {
+                const empty = document.createElement('div');
+                empty.className = 'ecs-bulk-empty';
+                empty.textContent = eligibleTargets.length
+                    ? 'No available ECS codes match this search.'
+                    : 'Every ECS code in this room already has at least one value assigned.';
+                results.appendChild(empty);
+                updateEcsBulkSelectedCount();
+                return;
+            }
+
+            visibleTargets.forEach(target => {
+                const row = document.createElement('label');
+                row.className = 'ecs-bulk-row';
+                if (ecsBulkSelectedCodeIds.has(target.codeId)) row.classList.add('selected');
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'ecs-bulk-checkbox';
+                checkbox.checked = ecsBulkSelectedCodeIds.has(target.codeId);
+                checkbox.dataset.codeId = target.codeId;
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) ecsBulkSelectedCodeIds.add(target.codeId);
+                    else ecsBulkSelectedCodeIds.delete(target.codeId);
+                    row.classList.toggle('selected', checkbox.checked);
+                    updateEcsBulkSelectedCount();
+                });
+
+                const code = document.createElement('span');
+                code.className = 'ecs-bulk-code';
+                code.textContent = target.ecsCode;
+
+                row.appendChild(checkbox);
+                row.appendChild(code);
+                results.appendChild(row);
+            });
+
+            updateEcsBulkSelectedCount();
+        }
+
+        function updateEcsBulkSelectedCount() {
+            const count = ecsBulkSelectedCodeIds.size;
+            const selectedCount = document.getElementById('ecsBulkSelectedCount');
+            if (selectedCount) selectedCount.textContent = `${count} selected`;
+            updateEcsBulkApplyState();
+        }
+
+        function getEcsBulkChosenValues() {
+            const chosen = [];
+            document.querySelectorAll('#ecsBulkListControls .ecs-bulk-select').forEach(select => {
+                if (select.value === '') return;
+                const list = getEcsDropdownLists().find(item => item.id === select.dataset.listId);
+                const optionIndex = Number.parseInt(select.value, 10);
+                if (!list || !Number.isInteger(optionIndex) || !list.options[optionIndex]) return;
+                chosen.push({ list, optionIndex, value: list.options[optionIndex] });
+            });
+            return chosen;
+        }
+
+        function updateEcsBulkApplyState() {
+            const button = document.getElementById('ecsBulkApply');
+            if (!button) return;
+            const selectedCount = ecsBulkSelectedCodeIds.size;
+            const chosenCount = getEcsBulkChosenValues().length;
+            button.disabled = selectedCount === 0 || chosenCount === 0;
+            button.textContent = selectedCount > 0
+                ? `Apply to ${selectedCount} selected ECS code${selectedCount === 1 ? '' : 's'}`
+                : 'Apply to selected ECS codes';
+        }
+
+        function showEcsBulkSelectionModal() {
+            const modal = document.getElementById('ecsBulkSelectionModal');
+            const roomName = getCurrentEcsRoomName();
+            if (!modal || !roomName) return;
+
+            ecsBulkSelectedCodeIds.clear();
+            const search = document.getElementById('ecsBulkSearch');
+            if (search) search.value = '';
+            const roomEl = document.getElementById('ecsBulkRoomName');
+            if (roomEl) roomEl.textContent = `Room: ${roomName}`;
+
+            renderEcsBulkListControls();
+            renderEcsBulkSelectionResults();
+            modal.classList.add('active');
+            modal.setAttribute('aria-hidden', 'false');
+            setTimeout(() => { if (search) search.focus(); }, 50);
+        }
+
+        function hideEcsBulkSelectionModal() {
+            const modal = document.getElementById('ecsBulkSelectionModal');
+            if (!modal) return;
+            modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+            ecsBulkSelectedCodeIds.clear();
+        }
+
+        function applyEcsBulkSelections() {
+            const chosenValues = getEcsBulkChosenValues();
+            if (!ecsBulkSelectedCodeIds.size || !chosenValues.length) return;
+
+            const eligibleIds = new Set(getEcsBulkEligibleTargets().map(target => target.codeId));
+            const targetIds = [...ecsBulkSelectedCodeIds].filter(codeId => eligibleIds.has(codeId));
+            if (!targetIds.length) {
+                renderEcsBulkSelectionResults();
+                showMessageModal('Nothing Applied', 'The selected ECS codes are no longer empty.');
+                return;
+            }
+
+            if (!appState.checkData) appState.checkData = {};
+            if (!appState.codeSpecificComments) appState.codeSpecificComments = {};
+            if (!appState.ecsExtraData) appState.ecsExtraData = {};
+
+            targetIds.forEach(codeId => {
+                chosenValues.forEach(choice => {
+                    if (choice.list.role === 'status') {
+                        appState.checkData[codeId] = choice.optionIndex;
+                    } else if (choice.list.role === 'comment') {
+                        appState.codeSpecificComments[codeId] = choice.value;
+                    } else {
+                        if (!appState.ecsExtraData[choice.list.id]) appState.ecsExtraData[choice.list.id] = {};
+                        appState.ecsExtraData[choice.list.id][codeId] = choice.value;
+                    }
+                });
+            });
+
+            saveDataToStorage();
+            hideEcsBulkSelectionModal();
+            generateCodeCheckItems();
+            updateCodeCheckStates();
+            updateCodeRoomSelectColor();
+            updateCustomDropdownOptions('codeRoomSelect', Object.keys(appState.roomCodes || {}), appState.currentCodeRoomIndex);
+            if (typeof window._ecsRefreshBadge === 'function') window._ecsRefreshBadge();
+
+            showMessageModal(
+                'Multiple Selection Applied',
+                `${chosenValues.length} field${chosenValues.length === 1 ? '' : 's'} updated for ${targetIds.length} ECS code${targetIds.length === 1 ? '' : 's'}.`
+            );
         }
 
         let ecsGlobalSearchMatches = [];
@@ -8280,27 +9039,24 @@ barcodeWrapper.appendChild(barcodeInput);
 
         function exportCodeToCsv() {
             try {
-                const codeStatusOptions = getCodeStatusOptions();
                 const allLists = getEcsDropdownLists();
-                const extraLists = allLists.slice(2);
-                const extraHeaders = extraLists.map(l => '"' + l.name.replace(/"/g, '""') + '"').join(',');
-                let csvContent = 'Room,Code,Status,Comment' + (extraHeaders ? ',' + extraHeaders : '') + ',Room_Status\n';
+                const csvCell = value => '"' + String(value || '').replace(/"/g, '""') + '"';
+                const listHeaders = allLists.map(list => csvCell(list.name)).join(',');
+                let csvContent = 'Room,Code' + (listHeaders ? ',' + listHeaders : '') + ',Room_Status\n';
 
                 for (const room in appState.roomCodes) {
                     appState.roomCodes[room].forEach(code => {
                         const uniqueCodeId = `${room}-${code}`;
-                        const statusIndex = appState.checkData[uniqueCodeId];
-                        const status = (statusIndex !== null && statusIndex !== undefined) ? codeStatusOptions[statusIndex] : '';
-                        const comment = appState.codeSpecificComments[uniqueCodeId] || '';
                         const room_status = appState.roomStatus[room] || '';
-                        let extraVals = '';
-                        if (extraLists.length) {
-                            extraVals = ',' + extraLists.map(l => {
-                                const val = (appState.ecsExtraData && appState.ecsExtraData[l.id] && appState.ecsExtraData[l.id][uniqueCodeId]) || '';
-                                return '"' + val.replace(/"/g, '""') + '"';
-                            }).join(',');
-                        }
-                        csvContent += '"' + room + '","' + code + '","' + status + '","' + comment.replace(/"/g, '""') + '"' + extraVals + ',"' + room_status + '"\n';
+                        const values = allLists.map(list => {
+                            if (list.role === 'status') {
+                                const statusIndex = appState.checkData[uniqueCodeId];
+                                return Number.isInteger(statusIndex) ? (list.options[statusIndex] || '') : '';
+                            }
+                            if (list.role === 'comment') return appState.codeSpecificComments[uniqueCodeId] || '';
+                            return (appState.ecsExtraData && appState.ecsExtraData[list.id] && appState.ecsExtraData[list.id][uniqueCodeId]) || '';
+                        });
+                        csvContent += [room, code, ...values, room_status].map(csvCell).join(',') + '\n';
                     });
                 }
 
@@ -8396,6 +9152,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 appState.codeSpecificComments   = clean.codeSpecificComments;
                 appState.ecsExtraData           = clean.ecsExtraData;
                 appState.ecsDropdownLists       = clean.ecsDropdownLists;
+                appState.ecsListRoleVersion     = clean.ecsListRoleVersion;
                 appState.customStatusOptions    = clean.customStatusOptions;
                 appState.customCommentOptions   = clean.customCommentOptions;
                 appState.ecsQuickEntryMode      = clean.ecsQuickEntryMode;
@@ -8585,6 +9342,7 @@ barcodeWrapper.appendChild(barcodeInput);
             if (state.customStatusOptions  && state.customStatusOptions.length)  m.cso = state.customStatusOptions;
             if (state.customCommentOptions && state.customCommentOptions.length) m.cco = state.customCommentOptions;
             if (state.ecsDropdownLists     && state.ecsDropdownLists.length)     m.edl = state.ecsDropdownLists;
+            m.elv = state.ecsListRoleVersion || 1;
             if (state.ecsExtraData         && Object.keys(state.ecsExtraData || {}).length) m.eed = state.ecsExtraData;
             if (state.ecsQuickEntryMode)                                          m.qe  = 1;
             if (state.ecsQuickEntryState && Object.keys(state.ecsQuickEntryState || {}).length) m.qes = state.ecsQuickEntryState;
@@ -8651,6 +9409,7 @@ barcodeWrapper.appendChild(barcodeInput);
                 customStatusOptions:    m.cso || [],
                 customCommentOptions:   m.cco || [],
                 ecsDropdownLists:       m.edl || [],
+                ecsListRoleVersion:     m.elv || 1,
                 ecsExtraData:           m.eed || {},
                 ecsQuickEntryMode:      !!m.qe,
                 ecsQuickEntryState:     m.qes || {},
@@ -10144,11 +10903,10 @@ function renderFlexBarcodeRows() {
                 const commentText = (appState.codeSpecificComments && appState.codeSpecificComments[uniqueCodeId])
                     ? appState.codeSpecificComments[uniqueCodeId] : '';
 
-                // Collect extra list values (lists[2], lists[3], …)
+                // Collect extra list values in their visual order.
                 const extraFields = [];
-                if (typeof getEcsDropdownLists === 'function') {
-                    const allLists = getEcsDropdownLists();
-                    allLists.slice(2).forEach(list => {
+                if (typeof getEcsExtraLists === 'function') {
+                    getEcsExtraLists().forEach(list => {
                         const val = (appState.ecsExtraData && appState.ecsExtraData[list.id] && appState.ecsExtraData[list.id][uniqueCodeId]) || '';
                         if (val) extraFields.push({ label: list.name, value: val });
                     });
