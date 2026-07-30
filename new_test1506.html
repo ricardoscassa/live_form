@@ -3110,7 +3110,21 @@
             }
         }
 
+        .ecs-bulk-sheet-btn {
+            display: none;
+        }
+
         @media (max-width: 560px) {
+            #codeCheckPage .bottom-nav-actions {
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+            }
+            #codeCheckPage .ecs-bulk-nav-btn {
+                display: none;
+            }
+            #codeCheckPage .ecs-bulk-sheet-btn {
+                display: flex;
+            }
+
             .ecs-bulk-modal {
                 width: calc(100vw - 16px);
                 max-height: calc(100vh - 24px);
@@ -3653,6 +3667,7 @@ Room Codes (Room- Codes)
                     <div class="bottom-nav-scrim" aria-hidden="true"></div>
                     <div class="bottom-nav-more-sheet" role="dialog" aria-label="More options" aria-modal="true">
                         <div class="bottom-nav-sheet-handle"></div>
+                        <button id="openEcsBulkSelectionMobile" class="bottom-nav-sheet-btn ecs-bulk-sheet-btn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="7" rx="1"/><polyline points="4.5 7.5 6.5 9.5 9 6"/><rect x="3" y="13" width="7" height="7" rx="1"/><polyline points="4.5 16.5 6.5 18.5 9 15"/><line x1="13" y1="7.5" x2="21" y2="7.5"/><line x1="13" y1="16.5" x2="21" y2="16.5"/></svg>Multiple Selection</button>
                         <button id="openEcsGlobalSearchMobile" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>Find ECS Code</button>
                         <button id="downloadJsonCodeCheckPage" class="bottom-nav-sheet-btn"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Data (JSON)</button>
                         <button id="backToCodeInput" class="bottom-nav-sheet-btn sheet-btn-danger"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Back to Input</button>
@@ -4704,6 +4719,7 @@ const flexEcsCodeListTextarea = document.getElementById('flexEcsCodeList');
             document.getElementById('shareCodeCheckPage').addEventListener('click', showShareModal);
             document.getElementById('backToCodeInput').addEventListener('click', backToCodeInput);
             document.getElementById('openEcsBulkSelection').addEventListener('click', showEcsBulkSelectionModal);
+            document.getElementById('openEcsBulkSelectionMobile').addEventListener('click', showEcsBulkSelectionModal);
             document.getElementById('ecsBulkSelectionClose').addEventListener('click', hideEcsBulkSelectionModal);
             document.getElementById('ecsBulkSearch').addEventListener('input', renderEcsBulkSelectionResults);
             document.getElementById('ecsBulkApply').addEventListener('click', applyEcsBulkSelections);
