@@ -2850,21 +2850,28 @@
     cursor: default;
 }
 
-/* Standalone ECS bulk status uses the same touch-safe shell as the photo
+/* Standalone ECS bulk selection uses the same touch-safe shell as the photo
    picker, but remains a completely separate no-photo workflow. */
 #ecsBulkStatusSheet {
     z-index: 10200;
 }
-.ecs-bulk-status-control {
+.ecs-bulk-list-controls {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
     padding: 10px 12px;
     border-bottom: 1px solid #3A3A3C;
+    max-height: 190px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     flex-shrink: 0;
 }
-.ecs-bulk-status-control label {
+.ecs-bulk-list-control {
+    min-width: 0;
+}
+.ecs-bulk-list-control label {
+    display: block;
+    margin-bottom: 5px;
     color: #F2F2F7;
     font-size: 0.82rem;
     font-weight: 850;
@@ -4231,25 +4238,16 @@ Room Codes (Room- Codes)
                 <button id="ecsBulkStatusSelectAll" class="stamp-ecs-picker-tool-btn" type="button">Select all matches</button>
                 <button id="ecsBulkStatusClearSelected" class="stamp-ecs-picker-tool-btn danger" type="button">Clear selected</button>
             </div>
-            <div class="ecs-bulk-status-control">
-                <label for="ecsBulkListSelect">Dropdown</label>
-                <select id="ecsBulkListSelect" class="ecs-bulk-status-select">
-                    <option value="">Choose a dropdown...</option>
-                </select>
-                <label for="ecsBulkValueSelect">Value</label>
-                <select id="ecsBulkValueSelect" class="ecs-bulk-status-select" disabled>
-                    <option value="">Choose a value...</option>
-                </select>
-            </div>
             <div id="ecsBulkStatusResults" class="stamp-ecs-picker-results"></div>
             <div class="stamp-ecs-picker-pagination">
                 <button id="ecsBulkStatusPrevious" class="stamp-ecs-picker-page-btn" type="button">Previous 50</button>
                 <span id="ecsBulkStatusPageInfo" class="stamp-ecs-picker-page-info">0 results</span>
                 <button id="ecsBulkStatusNext" class="stamp-ecs-picker-page-btn" type="button">Next 50</button>
             </div>
+            <div id="ecsBulkListControls" class="ecs-bulk-list-controls"></div>
             <div class="stamp-ecs-picker-actions">
                 <button id="ecsBulkStatusCancel" class="stamp-ecs-picker-action cancel" type="button">Cancel</button>
-                <button id="ecsBulkStatusApply" class="stamp-ecs-picker-action apply" type="button" disabled>Apply value</button>
+                <button id="ecsBulkStatusApply" class="stamp-ecs-picker-action apply" type="button" disabled>Apply selected values</button>
             </div>
         </div>
     </div>
@@ -8238,8 +8236,8 @@ barcodeWrapper.appendChild(barcodeInput);
         }
 
         // ── ECS standalone multiple-dropdown selection ───────────────────────
-        // This is deliberately independent from the photo stamp picker. The user
-        // explicitly chooses one configured dropdown and one of its values.
+        // This is deliberately independent from the photo stamp picker. Every
+        // configured select list is shown directly at the bottom of the sheet.
         const ecsBulkStatusState = {
             targets: [],
             selectedIds: new Set(),
@@ -8257,40 +8255,7 @@ barcodeWrapper.appendChild(barcodeInput);
             );
         }
 
-        function getSelectedEcsBulkList() {
-            const listSelect = document.getElementById('ecsBulkListSelect');
-            if (!listSelect || !listSelect.value) return null;
-            return getEcsBulkSelectableLists().find(list => list.id === listSelect.value) || null;
-        }
-
-        function getSelectedEcsBulkChoice() {
-            const list = getSelectedEcsBulkList();
-            const valueSelect = document.getElementById('ecsBulkValueSelect');
-            if (!list || !valueSelect || valueSelect.value === '') return null;
-            const optionIndex = Number.parseInt(valueSelect.value, 10);
-            const value = Number.isInteger(optionIndex) ? list.options[optionIndex] : '';
-            if (!String(value || '').trim()) return null;
-            return { list, optionIndex, value };
-        }
-
-        function ecsBulkListHasValue(list, codeId) {
-            if (!list) return false;
-            if (list.role === 'status') {
-                const value = appState.checkData ? appState.checkData[codeId] : null;
-                return value !== null && value !== undefined;
-            }
-            if (list.role === 'comment') {
-                const value = appState.codeSpecificComments ? appState.codeSpecificComments[codeId] : '';
-                return String(value || '').trim() !== '';
-            }
-            const value = appState.ecsExtraData && appState.ecsExtraData[list.id]
-                ? appState.ecsExtraData[list.id][codeId]
-                : '';
-            return String(value || '').trim() !== '';
-        }
-
-        function getEcsBulkStatusEligibleTargets(list = getSelectedEcsBulkList()) {
-            if (!list) return [];
+        function getEcsBulkStatusEligibleTargets() {
             const roomName = getCurrentEcsRoomName();
             const roomCodes = (appState.roomCodes && appState.roomCodes[roomName]) || [];
             return roomCodes
@@ -8301,8 +8266,70 @@ barcodeWrapper.appendChild(barcodeInput);
                 }))
                 .filter(target => {
                     if (!target.ecsCode) return false;
-                    return !ecsBulkListHasValue(list, target.codeId);
+                    const value = appState.checkData ? appState.checkData[target.codeId] : null;
+                    return value === null || value === undefined;
                 });
+        }
+
+        function getEcsBulkChosenValues() {
+            const choices = [];
+            document.querySelectorAll('#ecsBulkListControls .ecs-bulk-status-select').forEach(select => {
+                if (select.value === '') return;
+                const list = getEcsBulkSelectableLists().find(item => item.id === select.dataset.listId);
+                const optionIndex = Number.parseInt(select.value, 10);
+                const value = list && Number.isInteger(optionIndex) ? list.options[optionIndex] : '';
+                if (list && String(value || '').trim()) choices.push({ list, optionIndex, value });
+            });
+            return choices;
+        }
+
+        function renderEcsBulkListControls() {
+            const container = document.getElementById('ecsBulkListControls');
+            if (!container) return;
+            const fragment = document.createDocumentFragment();
+            const lists = getEcsBulkSelectableLists();
+
+            lists.forEach((list, listIndex) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'ecs-bulk-list-control';
+
+                const label = document.createElement('label');
+                const selectId = `ecsBulkListValue-${list.id}`;
+                label.htmlFor = selectId;
+                label.textContent = `${listIndex + 1}. ${list.name || 'Unnamed dropdown'}`;
+
+                const select = document.createElement('select');
+                select.id = selectId;
+                select.className = 'ecs-bulk-status-select';
+                select.dataset.listId = list.id;
+
+                const blank = document.createElement('option');
+                blank.value = '';
+                blank.textContent = 'Do not change';
+                select.appendChild(blank);
+
+                list.options.forEach((value, optionIndex) => {
+                    if (!String(value || '').trim()) return;
+                    const option = document.createElement('option');
+                    option.value = String(optionIndex);
+                    option.textContent = value;
+                    select.appendChild(option);
+                });
+
+                select.addEventListener('change', updateEcsBulkStatusApplyState);
+                wrapper.append(label, select);
+                fragment.appendChild(wrapper);
+            });
+
+            if (!lists.length) {
+                const empty = document.createElement('div');
+                empty.className = 'stamp-ecs-picker-empty';
+                empty.textContent = 'No selectable dropdowns are configured.';
+                fragment.appendChild(empty);
+            }
+
+            container.replaceChildren(fragment);
+            updateEcsBulkStatusApplyState();
         }
 
         function getFilteredEcsBulkStatusTargets() {
@@ -8322,11 +8349,11 @@ barcodeWrapper.appendChild(barcodeInput);
             const applyButton = document.getElementById('ecsBulkStatusApply');
             if (!applyButton) return;
             const selectedCount = ecsBulkStatusState.selectedIds.size;
-            const choice = getSelectedEcsBulkChoice();
-            applyButton.disabled = selectedCount === 0 || !choice;
+            const choices = getEcsBulkChosenValues();
+            applyButton.disabled = selectedCount === 0 || choices.length === 0;
             applyButton.textContent = selectedCount
                 ? `Apply to ${selectedCount} ECS code${selectedCount === 1 ? '' : 's'}`
-                : 'Apply value';
+                : 'Apply selected values';
         }
 
         function renderEcsBulkStatusResults() {
@@ -8340,22 +8367,19 @@ barcodeWrapper.appendChild(barcodeInput);
             if (!results || !matchCount || !pageInfo || !previous || !next || !selectAll || !clearSelected) return;
 
             const filtered = getFilteredEcsBulkStatusTargets();
-            const selectedList = getSelectedEcsBulkList();
             const totalPages = Math.max(1, Math.ceil(filtered.length / ecsBulkStatusState.pageSize));
             ecsBulkStatusState.page = Math.min(ecsBulkStatusState.page, totalPages - 1);
             const start = ecsBulkStatusState.page * ecsBulkStatusState.pageSize;
             const visible = filtered.slice(start, start + ecsBulkStatusState.pageSize);
             const selectedCount = ecsBulkStatusState.selectedIds.size;
 
-            matchCount.textContent = selectedList
-                ? `${filtered.length} match${filtered.length === 1 ? '' : 'es'} · ${selectedCount} selected`
-                : 'Choose a dropdown';
+            matchCount.textContent = `${filtered.length} match${filtered.length === 1 ? '' : 'es'} · ${selectedCount} selected`;
             pageInfo.textContent = filtered.length
                 ? `${start + 1}–${start + visible.length} of ${filtered.length}`
                 : '0 results';
             previous.disabled = ecsBulkStatusState.page === 0;
             next.disabled = ecsBulkStatusState.page >= totalPages - 1;
-            selectAll.disabled = !selectedList || filtered.length === 0 ||
+            selectAll.disabled = filtered.length === 0 ||
                 filtered.every(target => ecsBulkStatusState.selectedIds.has(target.codeId));
             clearSelected.disabled = selectedCount === 0;
 
@@ -8384,11 +8408,9 @@ barcodeWrapper.appendChild(barcodeInput);
             if (!visible.length) {
                 const empty = document.createElement('div');
                 empty.className = 'stamp-ecs-picker-empty';
-                empty.textContent = !selectedList
-                    ? 'Choose a dropdown above to see the available ECS codes.'
-                    : (ecsBulkStatusState.targets.length
-                        ? 'No available ECS codes match this search.'
-                        : `Every ECS code in this room already has a value in “${selectedList.name}”.`);
+                empty.textContent = ecsBulkStatusState.targets.length
+                    ? 'No available ECS codes match this search.'
+                    : 'Every ECS code in this room already has a status.';
                 fragment.appendChild(empty);
             }
 
@@ -8412,39 +8434,16 @@ barcodeWrapper.appendChild(barcodeInput);
             const roomName = getCurrentEcsRoomName();
             if (!roomName) return;
 
-            ecsBulkStatusState.targets = [];
+            ecsBulkStatusState.targets = getEcsBulkStatusEligibleTargets();
             ecsBulkStatusState.selectedIds.clear();
             ecsBulkStatusState.page = 0;
 
             const search = document.getElementById('ecsBulkStatusSearch');
-            const listSelect = document.getElementById('ecsBulkListSelect');
-            const valueSelect = document.getElementById('ecsBulkValueSelect');
             const title = document.getElementById('ecsBulkStatusTitle');
             if (search) search.value = '';
             if (title) title.textContent = `Multiple ECS selection · ${roomName}`;
 
-            if (listSelect) {
-                listSelect.replaceChildren();
-                const blank = document.createElement('option');
-                blank.value = '';
-                blank.textContent = 'Choose a dropdown...';
-                listSelect.appendChild(blank);
-                getEcsBulkSelectableLists().forEach((list, index) => {
-                    const option = document.createElement('option');
-                    option.value = list.id;
-                    option.textContent = `${index + 1}. ${list.name || 'Unnamed dropdown'}`;
-                    listSelect.appendChild(option);
-                });
-            }
-            if (valueSelect) {
-                valueSelect.replaceChildren();
-                const blank = document.createElement('option');
-                blank.value = '';
-                blank.textContent = 'Choose a value...';
-                valueSelect.appendChild(blank);
-                valueSelect.disabled = true;
-            }
-
+            renderEcsBulkListControls();
             renderEcsBulkStatusResults();
             setEcsBulkStatusSheetOpen(true);
         }
@@ -8454,38 +8453,38 @@ barcodeWrapper.appendChild(barcodeInput);
         }
 
         function applyEcsBulkStatus() {
-            const choice = getSelectedEcsBulkChoice();
-            if (!choice || !ecsBulkStatusState.selectedIds.size) return;
+            const choices = getEcsBulkChosenValues();
+            if (!choices.length || !ecsBulkStatusState.selectedIds.size) return;
 
-            const stillEligible = new Set(getEcsBulkStatusEligibleTargets(choice.list).map(target => target.codeId));
+            const stillEligible = new Set(getEcsBulkStatusEligibleTargets().map(target => target.codeId));
             const targetIds = [...ecsBulkStatusState.selectedIds].filter(codeId => stillEligible.has(codeId));
             if (!targetIds.length) {
-                ecsBulkStatusState.targets = getEcsBulkStatusEligibleTargets(choice.list);
+                ecsBulkStatusState.targets = getEcsBulkStatusEligibleTargets();
                 ecsBulkStatusState.selectedIds.clear();
                 renderEcsBulkStatusResults();
-                showMessageModal('Nothing Applied', `The selected ECS codes already have a value in “${choice.list.name}”.`);
+                showMessageModal('Nothing Applied', 'The selected ECS codes already have a status.');
                 return;
             }
 
             if (!appState.checkData) appState.checkData = {};
             if (!appState.codeSpecificComments) appState.codeSpecificComments = {};
             if (!appState.ecsExtraData) appState.ecsExtraData = {};
-            if (choice.list.role === 'extra' && !appState.ecsExtraData[choice.list.id]) {
-                appState.ecsExtraData[choice.list.id] = {};
-            }
             targetIds.forEach(codeId => {
-                if (choice.list.role === 'status') {
-                    appState.checkData[codeId] = choice.optionIndex;
-                } else if (choice.list.role === 'comment') {
-                    appState.codeSpecificComments[codeId] = choice.value;
-                } else {
-                    appState.ecsExtraData[choice.list.id][codeId] = choice.value;
-                }
+                choices.forEach(choice => {
+                    if (choice.list.role === 'status') {
+                        appState.checkData[codeId] = choice.optionIndex;
+                    } else if (choice.list.role === 'comment') {
+                        appState.codeSpecificComments[codeId] = choice.value;
+                    } else {
+                        if (!appState.ecsExtraData[choice.list.id]) appState.ecsExtraData[choice.list.id] = {};
+                        appState.ecsExtraData[choice.list.id][codeId] = choice.value;
+                    }
+                });
             });
             saveDataToStorage();
 
             updateCodeCheckStates();
-            if (choice.list.role === 'status' || choice.list.role === 'comment') {
+            if (choices.some(choice => choice.list.role === 'status' || choice.list.role === 'comment')) {
                 _showCameraForCodeIds(targetIds);
             }
             updateCodeRoomSelector();
@@ -8493,10 +8492,11 @@ barcodeWrapper.appendChild(barcodeInput);
             if (typeof window._ecsRefreshBadge === 'function') window._ecsRefreshBadge();
 
             closeEcsBulkStatusSheet();
+            const choiceSummary = choices.map(choice => `“${choice.value}” (${choice.list.name})`).join(', ');
             showMessageModal(
                 'Multiple Selection Applied',
-                `“${choice.value}” from “${choice.list.name}” was applied to ${targetIds.length} ` +
-                    `ECS code${targetIds.length === 1 ? '' : 's'}. No photos were created.`
+                `${choiceSummary} applied to ${targetIds.length} ECS code${targetIds.length === 1 ? '' : 's'}. ` +
+                    'No photos were created.'
             );
         }
 
@@ -8511,33 +8511,6 @@ barcodeWrapper.appendChild(barcodeInput);
             document.getElementById('ecsBulkStatusClose').addEventListener('click', closeEcsBulkStatusSheet);
             document.getElementById('ecsBulkStatusCancel').addEventListener('click', closeEcsBulkStatusSheet);
             document.getElementById('ecsBulkStatusApply').addEventListener('click', applyEcsBulkStatus);
-            document.getElementById('ecsBulkListSelect').addEventListener('change', event => {
-                const valueSelect = document.getElementById('ecsBulkValueSelect');
-                const selectedList = getEcsBulkSelectableLists().find(list => list.id === event.target.value) || null;
-                valueSelect.replaceChildren();
-
-                const blank = document.createElement('option');
-                blank.value = '';
-                blank.textContent = selectedList ? 'Choose a value...' : 'Choose a dropdown first...';
-                valueSelect.appendChild(blank);
-
-                if (selectedList) {
-                    selectedList.options.forEach((value, index) => {
-                        if (!String(value || '').trim()) return;
-                        const option = document.createElement('option');
-                        option.value = String(index);
-                        option.textContent = value;
-                        valueSelect.appendChild(option);
-                    });
-                }
-                valueSelect.disabled = !selectedList;
-                ecsBulkStatusState.targets = getEcsBulkStatusEligibleTargets(selectedList);
-                ecsBulkStatusState.selectedIds.clear();
-                ecsBulkStatusState.page = 0;
-                search.value = '';
-                renderEcsBulkStatusResults();
-            });
-            document.getElementById('ecsBulkValueSelect').addEventListener('change', updateEcsBulkStatusApplyState);
 
             search.addEventListener('input', () => {
                 if (ecsBulkStatusState.searchTimer) clearTimeout(ecsBulkStatusState.searchTimer);
