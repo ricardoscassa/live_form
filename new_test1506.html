@@ -2615,9 +2615,11 @@
 .stamp-extra-suggestions {
     position: static;
     width: 100%;
-    max-height: 180px;
+    max-height: min(42vh, 360px);
     margin-top: 6px;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     background: #1C1C1E;
     border: 1px solid #48484A;
     border-radius: 10px;
@@ -2640,6 +2642,8 @@
     grid-template-columns: 24px minmax(0, 1fr) auto;
     align-items: center;
     gap: 9px;
+    min-height: 48px;
+    touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
 .stamp-extra-suggestion:last-child {
@@ -2687,10 +2691,45 @@
     padding: 13px 12px;
     text-align: center;
 }
+.stamp-extra-results-footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 9px 10px;
+    border-top: 1px solid #48484A;
+    background: rgba(28,28,30,0.97);
+}
+.stamp-extra-results-count {
+    color: #AEAEB2;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.stamp-extra-page-controls {
+    display: flex;
+    gap: 7px;
+    margin-left: auto;
+}
+.stamp-extra-load-more {
+    min-height: 36px;
+    border: 1px solid rgba(10,132,255,0.55);
+    border-radius: 8px;
+    background: rgba(10,132,255,0.16);
+    color: #D9EEFF;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 7px 10px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
 .stamp-extra-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 9px;
 }
@@ -2718,6 +2757,14 @@
 }
 .stamp-extra-selected:empty {
     display: none;
+}
+.stamp-extra-overflow {
+    display: inline-flex;
+    align-items: center;
+    color: #AEAEB2;
+    font-size: 0.76rem;
+    font-weight: 800;
+    padding: 7px 2px;
 }
 .stamp-batch-summary {
     display: none;
@@ -4372,6 +4419,7 @@ Room Codes (Room- Codes)
                     <div id="stampExtraEcsSuggestions" class="stamp-extra-suggestions"></div>
                 </div>
                 <div class="stamp-extra-toolbar">
+                    <button id="stampExtraEcsSelectMatches" class="stamp-extra-toolbar-btn" type="button">Select all matches</button>
                     <button id="stampExtraEcsViewSelected" class="stamp-extra-toolbar-btn" type="button" disabled>View selected</button>
                     <button id="stampExtraEcsClearSelection" class="stamp-extra-toolbar-btn danger" type="button" disabled>Clear selection</button>
                 </div>
@@ -10862,6 +10910,42 @@ function renderFlexBarcodeRows() {
             });
         }
 
+        // Save all ECS links for one physical photo copy in a single transaction.
+        // Large shared photos can cover hundreds of codes, so opening one transaction
+        // per code makes the UI appear frozen after the selection is applied.
+        async function savePhotosForTargets(targets, dataUrl, options = {}) {
+            const safeTargets = (targets || []).filter(Boolean);
+            if (!safeTargets.length) return [];
+
+            const db = await openPhotoDB();
+            return new Promise((resolve, reject) => {
+                const now = new Date();
+                const savedIds = [];
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+
+                safeTargets.forEach(target => {
+                    const labelEcsCode = options.displayEcsCode || target.ecsCode;
+                    const request = store.add({
+                        codeId: target.codeId,
+                        roomName: target.roomName,
+                        ecsCode: target.ecsCode,
+                        exportEcsCode: options.exportEcsCode || target.ecsCode,
+                        groupPhotoId: options.groupPhotoId || null,
+                        groupEcsCodes: options.groupEcsCodes || null,
+                        dataUrl,
+                        timestamp: now.toISOString(),
+                        label: `${target.roomName} / ${labelEcsCode}\n${formatDateTime(now)}`
+                    });
+                    request.onsuccess = () => savedIds.push(request.result);
+                });
+
+                tx.oncomplete = () => resolve(savedIds);
+                tx.onerror = event => reject(tx.error || event.target.error);
+                tx.onabort = event => reject(tx.error || event.target.error);
+            });
+        }
+
         async function getPhotosByCodeId(codeId) {
             const db = await openPhotoDB();
             return new Promise((resolve, reject) => {
@@ -11119,6 +11203,9 @@ function renderFlexBarcodeRows() {
 
                                 const groupRunId = `${uniqueCodeId}-${Date.now()}`;
                                 let savedCopyCount = 0;
+                                const batchSourceImage = stampBatchData
+                                    ? await loadStampSourceImage(stampBatchData.rawDataUrl)
+                                    : null;
 
                                 for (let batchIndex = 0; batchIndex < photoBatches.length; batchIndex += 1) {
                                     const batchTargets = photoBatches[batchIndex];
@@ -11130,7 +11217,7 @@ function renderFlexBarcodeRows() {
                                         );
                                     }
                                     const batchDataUrl = stampBatchData
-                                        ? await renderEcsStampCopy(stampBatchData, batchCodes)
+                                        ? await renderEcsStampCopy(stampBatchData, batchCodes, batchSourceImage)
                                         : finalDataUrl;
                                     const groupedPhotoOptions = batchTargets.length > 1
                                         ? {
@@ -11141,15 +11228,11 @@ function renderFlexBarcodeRows() {
                                         }
                                         : {};
 
-                                    for (const target of batchTargets) {
-                                        await savePhoto(
-                                            target.codeId,
-                                            target.roomName,
-                                            target.ecsCode,
-                                            batchDataUrl,
-                                            groupedPhotoOptions
-                                        );
-                                    }
+                                    await savePhotosForTargets(
+                                        batchTargets,
+                                        batchDataUrl,
+                                        groupedPhotoOptions
+                                    );
                                     savedCopyCount += 1;
                                 }
 
@@ -11167,7 +11250,7 @@ function renderFlexBarcodeRows() {
                                 updateCodeRoomSelectColor();
                                 updateCodeRoomSelector();
                                 if (typeof window._ecsRefreshBadge === 'function') window._ecsRefreshBadge();
-                                validExtraTargets.forEach(target => _showCameraForCodeId(target.codeId));
+                                _showCameraForCodeIds(validExtraTargets.map(target => target.codeId));
                                 await refreshCount();
                                 const successText = saveTargets.length === 1
                                     ? `Photo saved for ${saveTargetCodes[0]}.`
@@ -11586,13 +11669,16 @@ function renderFlexBarcodeRows() {
             setTimeout(injectCameraButtonsIntoRenderedRows, 0);
         };
 
-        function _showCameraForCodeId(codeId) {
+        function _showCameraForCodeIds(codeIds) {
+            const requestedCodeIds = new Set((codeIds || []).filter(Boolean));
+            if (!requestedCodeIds.size) return;
             const roomName = Object.keys(appState.roomCodes || {})[appState.currentCodeRoomIndex] || '';
 
             // ── List view rows (.grid-row) ──
             document.querySelectorAll('#codeChecksContainer .grid-row').forEach(row => {
-                const btn = row.querySelector(`.status-button[data-code-id="${codeId}"]`);
-                if (btn) {
+                const btn = row.querySelector('.status-button:not([data-role])[data-code-id]');
+                const codeId = btn ? btn.dataset.codeId : '';
+                if (requestedCodeIds.has(codeId)) {
                     const codeCell = row.querySelector('.grid-cell.code-cell');
                     const ecsCode = codeCell ? codeCell.textContent.trim() : codeId;
                     addCameraButtonToRow(row, codeId, roomName, ecsCode);
@@ -11601,13 +11687,18 @@ function renderFlexBarcodeRows() {
 
             // ── Search view confirmed rows (.ecs-quick-entry-row.confirmed) ──
             document.querySelectorAll('#codeChecksContainer .ecs-quick-entry-row.confirmed').forEach(row => {
-                const btn = row.querySelector(`.status-button[data-code-id="${codeId}"]`);
-                if (btn) {
+                const btn = row.querySelector('.status-button:not([data-role])[data-code-id]');
+                const codeId = btn ? btn.dataset.codeId : '';
+                if (requestedCodeIds.has(codeId)) {
                     const codeLabel = row.querySelector('.ecs-confirmed-code');
                     const ecsCode = codeLabel ? codeLabel.textContent.trim() : (row.dataset.code || codeId);
                     addCameraButtonToRow(row, codeId, roomName, ecsCode, true); // icon-only style for search view
                 }
             });
+        }
+
+        function _showCameraForCodeId(codeId) {
+            _showCameraForCodeIds([codeId]);
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -12039,6 +12130,7 @@ function renderFlexBarcodeRows() {
             const selected = document.getElementById('stampExtraEcsSelected');
             const batchSummary = document.getElementById('stampBatchSummary');
             const clearSearch = document.getElementById('stampExtraEcsClearSearch');
+            const selectMatches = document.getElementById('stampExtraEcsSelectMatches');
             const viewSelected = document.getElementById('stampExtraEcsViewSelected');
             const clearSelection = document.getElementById('stampExtraEcsClearSelection');
             const applySelection = document.getElementById('stampExtraEcsApply');
@@ -12054,6 +12146,7 @@ function renderFlexBarcodeRows() {
             if (suggestions) {
                 suggestions.innerHTML = '';
                 suggestions.classList.remove('open');
+                suggestions.onpointerdown = null;
             }
             if (selected) selected.innerHTML = '';
             if (batchSummary) {
@@ -12061,6 +12154,7 @@ function renderFlexBarcodeRows() {
                 batchSummary.classList.remove('visible');
             }
             if (clearSearch) clearSearch.onclick = null;
+            if (selectMatches) selectMatches.onclick = null;
             if (viewSelected) viewSelected.onclick = null;
             if (clearSelection) clearSelection.onclick = null;
             if (applySelection) applySelection.onclick = null;
@@ -12267,13 +12361,14 @@ function renderFlexBarcodeRows() {
             const selected = document.getElementById('stampExtraEcsSelected');
             const countLabel = document.getElementById('stampExtraEcsCount');
             const clearSearch = document.getElementById('stampExtraEcsClearSearch');
+            const selectMatches = document.getElementById('stampExtraEcsSelectMatches');
             const viewSelected = document.getElementById('stampExtraEcsViewSelected');
             const clearSelection = document.getElementById('stampExtraEcsClearSelection');
             const helper = document.getElementById('stampExtraEcsHelper');
             const applySelection = document.getElementById('stampExtraEcsApply');
             const saveButton = document.getElementById('stampSaveBtn');
             if (!panel || !input || !suggestions || !selected || !countLabel ||
-                !clearSearch || !viewSelected || !clearSelection || !helper ||
+                !clearSearch || !selectMatches || !viewSelected || !clearSelection || !helper ||
                 !applySelection || !saveButton || !_stampEditorState) return;
 
             const hasStatusToCopy = stampContext &&
@@ -12289,6 +12384,17 @@ function renderFlexBarcodeRows() {
             _stampEditorState.pendingExtraEcsTargets = [...(_stampEditorState.extraEcsTargets || [])];
             _stampEditorState.extraEcsSelectionDirty = false;
             let showSelectedOnly = false;
+            let resultPageStart = 0;
+            const resultPageSize = 50;
+            const selectedChipLimit = 12;
+            let suggestionPointerActive = false;
+
+            suggestions.onpointerdown = () => {
+                suggestionPointerActive = true;
+                setTimeout(() => {
+                    suggestionPointerActive = false;
+                }, 300);
+            };
 
             function getPendingTargets() {
                 return _stampEditorState ? (_stampEditorState.pendingExtraEcsTargets || []) : [];
@@ -12318,8 +12424,7 @@ function renderFlexBarcodeRows() {
                         const codeLower = normalizeEcsSearchValue(target.ecsCode);
                         const codeCompact = compactEcsSearchValue(target.ecsCode);
                         return codeLower.includes(q) || (compactQ && codeCompact.includes(compactQ));
-                    })
-                    .slice(0, 50);
+                    });
             }
 
             function refreshSelectionState() {
@@ -12333,6 +12438,18 @@ function renderFlexBarcodeRows() {
                 viewSelected.disabled = pendingCount === 0;
                 viewSelected.textContent = showSelectedOnly ? 'Show all' : 'View selected';
                 clearSelection.disabled = pendingCount === 0;
+                const filteredTargets = showSelectedOnly ? [] : getFilteredTargets(input.value);
+                const selectedIds = getSelectedIds();
+                const unselectedMatchCount = filteredTargets.reduce(
+                    (count, target) => count + (selectedIds.has(target.codeId) ? 0 : 1),
+                    0
+                );
+                selectMatches.disabled = showSelectedOnly || unselectedMatchCount === 0;
+                selectMatches.textContent = showSelectedOnly
+                    ? 'Selected view'
+                    : unselectedMatchCount === 0
+                        ? 'All matches selected'
+                        : `Select all ${unselectedMatchCount} match${unselectedMatchCount === 1 ? '' : 'es'}`;
                 applySelection.disabled = !dirty;
                 saveButton.disabled = dirty;
                 saveButton.setAttribute('aria-describedby', 'stampExtraEcsHelper');
@@ -12360,7 +12477,8 @@ function renderFlexBarcodeRows() {
 
             function renderSelected() {
                 selected.innerHTML = '';
-                getPendingTargets().forEach(target => {
+                const pendingTargets = getPendingTargets();
+                pendingTargets.slice(0, selectedChipLimit).forEach(target => {
                     const chip = document.createElement('span');
                     chip.className = 'stamp-extra-chip';
 
@@ -12377,15 +12495,26 @@ function renderFlexBarcodeRows() {
                     chip.appendChild(removeBtn);
                     selected.appendChild(chip);
                 });
+                if (pendingTargets.length > selectedChipLimit) {
+                    const overflow = document.createElement('span');
+                    overflow.className = 'stamp-extra-overflow';
+                    overflow.textContent = `+${pendingTargets.length - selectedChipLimit} more — use View selected`;
+                    selected.appendChild(overflow);
+                }
                 refreshSelectionState();
             }
 
-            function renderSuggestions(query, forceOpen = false) {
+            function renderSuggestions(query, forceOpen = false, preserveScroll = false) {
+                const previousScrollTop = preserveScroll ? suggestions.scrollTop : 0;
                 suggestions.innerHTML = '';
-                const matches = getFilteredTargets(query);
+                const allMatches = getFilteredTargets(query);
+                if (resultPageStart >= allMatches.length) {
+                    resultPageStart = Math.max(0, Math.floor((allMatches.length - 1) / resultPageSize) * resultPageSize);
+                }
+                const matches = allMatches.slice(resultPageStart, resultPageStart + resultPageSize);
                 const selectedIds = getSelectedIds();
 
-                if (!matches.length) {
+                if (!allMatches.length) {
                     const empty = document.createElement('div');
                     empty.className = 'stamp-extra-empty';
                     empty.textContent = showSelectedOnly
@@ -12424,7 +12553,52 @@ function renderFlexBarcodeRows() {
                     suggestions.appendChild(btn);
                 });
 
+                const footer = document.createElement('div');
+                footer.className = 'stamp-extra-results-footer';
+
+                const resultCount = document.createElement('span');
+                resultCount.className = 'stamp-extra-results-count';
+                resultCount.textContent = `Showing ${resultPageStart + 1}–${resultPageStart + matches.length} of ${allMatches.length}`;
+                footer.appendChild(resultCount);
+
+                if (resultPageStart > 0 || resultPageStart + matches.length < allMatches.length) {
+                    const pageControls = document.createElement('div');
+                    pageControls.className = 'stamp-extra-page-controls';
+
+                    if (resultPageStart > 0) {
+                        const previousPage = document.createElement('button');
+                        previousPage.type = 'button';
+                        previousPage.className = 'stamp-extra-load-more';
+                        previousPage.textContent = 'Previous 50';
+                        previousPage.addEventListener('mousedown', e => e.preventDefault());
+                        previousPage.addEventListener('click', () => {
+                            resultPageStart = Math.max(0, resultPageStart - resultPageSize);
+                            renderSuggestions(query, true);
+                        });
+                        pageControls.appendChild(previousPage);
+                    }
+
+                    if (resultPageStart + matches.length < allMatches.length) {
+                        const nextPage = document.createElement('button');
+                        nextPage.type = 'button';
+                        nextPage.className = 'stamp-extra-load-more';
+                        nextPage.textContent = `Next ${Math.min(resultPageSize, allMatches.length - resultPageStart - matches.length)}`;
+                        nextPage.addEventListener('mousedown', e => e.preventDefault());
+                        nextPage.addEventListener('click', () => {
+                            resultPageStart += resultPageSize;
+                            renderSuggestions(query, true);
+                        });
+                        pageControls.appendChild(nextPage);
+                    }
+                    footer.appendChild(pageControls);
+                }
+                suggestions.appendChild(footer);
                 suggestions.classList.toggle('open', forceOpen || document.activeElement === input || showSelectedOnly);
+                if (preserveScroll) {
+                    requestAnimationFrame(() => {
+                        suggestions.scrollTop = Math.min(previousScrollTop, suggestions.scrollHeight);
+                    });
+                }
             }
 
             function toggleTarget(target) {
@@ -12437,13 +12611,14 @@ function renderFlexBarcodeRows() {
 
                 if (showSelectedOnly && !_stampEditorState.pendingExtraEcsTargets.length) {
                     showSelectedOnly = false;
+                    resultPageStart = 0;
                 }
                 renderSelected();
-                renderSuggestions(input.value, true);
-                input.focus();
+                renderSuggestions(input.value, true, true);
             }
 
             input.oninput = () => {
+                resultPageStart = 0;
                 refreshSelectionState();
                 renderSuggestions(input.value, true);
             };
@@ -12458,19 +12633,38 @@ function renderFlexBarcodeRows() {
                 }
             };
             input.onblur = () => {
-                setTimeout(() => suggestions.classList.remove('open'), 150);
+                setTimeout(() => {
+                    if (!suggestionPointerActive && !suggestions.contains(document.activeElement)) {
+                        suggestions.classList.remove('open');
+                    }
+                }, 150);
             };
 
             clearSearch.onclick = () => {
                 input.value = '';
+                resultPageStart = 0;
                 refreshSelectionState();
                 renderSuggestions('', true);
                 input.focus();
             };
 
+            selectMatches.onclick = () => {
+                if (showSelectedOnly) return;
+                const selectedById = new Map(
+                    getPendingTargets().map(target => [target.codeId, target])
+                );
+                getFilteredTargets(input.value).forEach(target => {
+                    selectedById.set(target.codeId, target);
+                });
+                _stampEditorState.pendingExtraEcsTargets = [...selectedById.values()];
+                renderSelected();
+                renderSuggestions(input.value, true, true);
+            };
+
             viewSelected.onclick = () => {
                 if (!getPendingTargets().length) return;
                 showSelectedOnly = !showSelectedOnly;
+                resultPageStart = 0;
                 refreshSelectionState();
                 renderSuggestions(input.value, true);
             };
@@ -12478,6 +12672,7 @@ function renderFlexBarcodeRows() {
             clearSelection.onclick = () => {
                 _stampEditorState.pendingExtraEcsTargets = [];
                 showSelectedOnly = false;
+                resultPageStart = 0;
                 renderSelected();
                 renderSuggestions(input.value, document.activeElement === input);
             };
@@ -12732,15 +12927,18 @@ function renderFlexBarcodeRows() {
             editor.appendChild(row);
         }
 
-        /** Wire the drag handle on the preview canvas to reposition the stamp bar */
-        async function renderStampPreview(canvas, lines, rawDataUrl) {
+        function loadStampSourceImage(rawDataUrl) {
             const img = new Image();
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
+            return new Promise((resolve, reject) => {
+                img.onload = () => resolve(img);
                 img.onerror = () => reject(new Error('Could not load the photo for stamping.'));
                 img.src = rawDataUrl;
             });
+        }
 
+        /** Wire the drag handle on the preview canvas to reposition the stamp bar */
+        async function renderStampPreview(canvas, lines, rawDataUrl, sourceImage = null) {
+            const img = sourceImage || await loadStampSourceImage(rawDataUrl);
             try {
                 // ── Resize: cap longest side at 1920px (matches stampPhoto logic) ──
                 // This ensures the saved JPEG is ~300–500 KB instead of 4–5 MB.
@@ -12862,14 +13060,14 @@ function renderFlexBarcodeRows() {
             }
         }
 
-        async function renderEcsStampCopy(stampBatchData, batchCodes) {
+        async function renderEcsStampCopy(stampBatchData, batchCodes, sourceImage = null) {
             const canvas = document.createElement('canvas');
             const lines = buildStampLinesForEcsBatch(
                 stampBatchData.lines,
                 stampBatchData.roomName,
                 batchCodes
             );
-            await renderStampPreview(canvas, lines, stampBatchData.rawDataUrl);
+            await renderStampPreview(canvas, lines, stampBatchData.rawDataUrl, sourceImage);
             return canvas.toDataURL('image/jpeg', 0.88);
         }
 
