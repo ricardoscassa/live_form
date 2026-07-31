@@ -2628,6 +2628,21 @@
     gap: 7px;
     margin-top: 9px;
 }
+.stamp-batch-summary {
+    display: none;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    background: rgba(10,132,255,0.14);
+    border: 1px solid rgba(10,132,255,0.35);
+    color: #D9EEFF;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+.stamp-batch-summary.visible {
+    display: block;
+}
 .stamp-extra-chip {
     display: inline-flex;
     align-items: center;
@@ -3923,6 +3938,7 @@ Room Codes (Room- Codes)
                     <div id="stampExtraEcsSuggestions" class="stamp-extra-suggestions"></div>
                 </div>
                 <div id="stampExtraEcsSelected" class="stamp-extra-selected"></div>
+                <div id="stampBatchSummary" class="stamp-batch-summary" role="status"></div>
             </div>
         </div>
 
@@ -10159,7 +10175,7 @@ function renderFlexBarcodeRows() {
                     // Open stamp editor — let user review/edit before saving
                     openStampEditor(ev.target.result, uniqueCodeId, roomName, ecsCode,
                         statusText, commentText, extraFields,
-                        async (finalDataUrl, extraEcsTargets = []) => {
+                        async (finalDataUrl, extraEcsTargets = [], stampBatchData = null) => {
                             // onSave callback
                             try {
                                 const statusToCopy = (statusIdx !== null && statusIdx !== undefined) ? statusIdx : null;
@@ -10175,19 +10191,50 @@ function renderFlexBarcodeRows() {
                                     ...validExtraTargets
                                 ];
                                 const saveTargetCodes = saveTargets.map(target => target.ecsCode);
+                                const requestedBatches = stampBatchData &&
+                                    Array.isArray(stampBatchData.ecsCodeBatches) &&
+                                    stampBatchData.ecsCodeBatches.length
+                                    ? stampBatchData.ecsCodeBatches
+                                    : [saveTargetCodes];
+                                const photoBatches = mapEcsTargetsToPhotoBatches(
+                                    saveTargets,
+                                    requestedBatches
+                                );
 
-                                // Shared-photo metadata is only added when multiple ECS codes
-                                // are selected. Single-code photos keep their original filename.
-                                const groupedPhotoOptions = saveTargets.length > 1
-                                    ? {
-                                        exportEcsCode: saveTargetCodes.join('_'),
-                                        displayEcsCode: formatEcsCodesForStamp(saveTargetCodes),
-                                        groupPhotoId: `${uniqueCodeId}-${Date.now()}`,
-                                        groupEcsCodes: saveTargetCodes
+                                const groupRunId = `${uniqueCodeId}-${Date.now()}`;
+                                let savedCopyCount = 0;
+
+                                for (let batchIndex = 0; batchIndex < photoBatches.length; batchIndex += 1) {
+                                    const batchTargets = photoBatches[batchIndex];
+                                    const batchCodes = batchTargets.map(target => target.ecsCode);
+                                    if (photoBatches.length > 1) {
+                                        showMessageModal(
+                                            'Saving Photo Copies',
+                                            `Creating copy ${batchIndex + 1} of ${photoBatches.length}…`
+                                        );
                                     }
-                                    : {};
-                                for (const target of saveTargets) {
-                                    await savePhoto(target.codeId, target.roomName, target.ecsCode, finalDataUrl, groupedPhotoOptions);
+                                    const batchDataUrl = stampBatchData
+                                        ? await renderEcsStampCopy(stampBatchData, batchCodes)
+                                        : finalDataUrl;
+                                    const groupedPhotoOptions = batchTargets.length > 1
+                                        ? {
+                                            exportEcsCode: batchCodes.join('_'),
+                                            displayEcsCode: formatEcsCodesForStamp(batchCodes),
+                                            groupPhotoId: `${groupRunId}-${batchIndex + 1}`,
+                                            groupEcsCodes: batchCodes
+                                        }
+                                        : {};
+
+                                    for (const target of batchTargets) {
+                                        await savePhoto(
+                                            target.codeId,
+                                            target.roomName,
+                                            target.ecsCode,
+                                            batchDataUrl,
+                                            groupedPhotoOptions
+                                        );
+                                    }
+                                    savedCopyCount += 1;
                                 }
 
                                 // After the photo saves successfully, copy the primary status to
@@ -10206,8 +10253,13 @@ function renderFlexBarcodeRows() {
                                 if (typeof window._ecsRefreshBadge === 'function') window._ecsRefreshBadge();
                                 validExtraTargets.forEach(target => _showCameraForCodeId(target.codeId));
                                 await refreshCount();
-                                showMessageModal('Photo Saved ✓', `Photo saved for ${formatEcsCodesForStamp(saveTargetCodes)}.`);
+                                const successText = saveTargets.length === 1
+                                    ? `Photo saved for ${saveTargetCodes[0]}.`
+                                    : `Photo saved for ${saveTargets.length} ECS codes as ${savedCopyCount} ` +
+                                        `${savedCopyCount === 1 ? 'photo' : 'photo copies'}.`;
+                                showMessageModal('Photo Saved ✓', successText);
                             } catch(err) {
+                                console.error('Could not save ECS photo copies:', err);
                                 showMessageModal('Error', 'Could not save photo. Storage may be full.');
                             }
                             fileInput.value = '';
@@ -10335,6 +10387,142 @@ function renderFlexBarcodeRows() {
             }
         });
 
+        // Each saved copy carries as many ECS codes as can fit safely in both its
+        // Windows filename and its readable photo stamp. The overall selection is
+        // unlimited: overflow codes continue in additional copies of the photo.
+        const MAX_PHOTO_FILENAME_LENGTH = 180;
+        const PHOTO_FILENAME_SEQUENCE_RESERVE = 8;
+        const MAX_STAMP_RENDER_LINES_PER_COPY = 6;
+
+        function sanitizePhotoFilenamePart(value) {
+            return String(value || '')
+                .replace(/[^a-z0-9_\-]/gi, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_+|_+$/g, '');
+        }
+
+        function doesEcsBatchFitPhotoFilename(roomName, ecsCodes) {
+            const roomPart = sanitizePhotoFilenamePart(roomName) || 'room';
+            const ecsPart = sanitizePhotoFilenamePart(getUniqueEcsCodes(ecsCodes).join('_')) || 'ecs';
+            const timestampLength = '000000-000000'.length;
+            const filenameLength = roomPart.length + 1 + ecsPart.length + 1 +
+                timestampLength + '.jpg'.length + PHOTO_FILENAME_SEQUENCE_RESERVE;
+            return filenameLength <= MAX_PHOTO_FILENAME_LENGTH;
+        }
+
+        function getNonEcsStampRenderLineCount(lines) {
+            const activeLines = (lines || []).filter(line =>
+                line && line.on && String(line.text || '').trim() && !isStampEcsLine(line)
+            );
+            let count = 0;
+
+            for (let index = 0; index < activeLines.length; index += 1) {
+                const line = activeLines[index];
+                const nextLine = activeLines[index + 1];
+                const isExtra = String(line.id || '').startsWith('line-extra');
+                const nextIsExtra = nextLine && String(nextLine.id || '').startsWith('line-extra');
+                let text = line.text;
+
+                if (isExtra && nextIsExtra) {
+                    text = `${line.text}   |   ${nextLine.text}`;
+                    index += 1;
+                }
+
+                const weightPerLine = line.small || isExtra ? 48 : 42;
+                count += Math.max(1, Math.ceil(getEcsStampTextWeight(text) / weightPerLine));
+            }
+
+            return count;
+        }
+
+        function doesEcsBatchFitStamp(roomName, ecsCodes, lines) {
+            const nonEcsLines = getNonEcsStampRenderLineCount(lines);
+            const availableEcsLines = Math.max(1, MAX_STAMP_RENDER_LINES_PER_COPY - nonEcsLines);
+            const requiredEcsLines = shouldSplitStampLocation(roomName, ecsCodes)
+                ? buildEcsStampLineTexts(ecsCodes).length
+                : 0;
+            return requiredEcsLines <= availableEcsLines;
+        }
+
+        function splitEcsCodesIntoPhotoBatches(codes, roomName, lines = [], filenameOnly = false) {
+            const uniqueCodes = getUniqueEcsCodes(codes);
+            if (!uniqueCodes.length) return [];
+
+            const batches = [];
+            let currentBatch = [];
+
+            uniqueCodes.forEach(code => {
+                const candidate = [...currentBatch, code];
+                const fitsFilename = doesEcsBatchFitPhotoFilename(roomName, candidate);
+                const fitsStamp = filenameOnly || doesEcsBatchFitStamp(roomName, candidate, lines);
+
+                if (currentBatch.length && (!fitsFilename || !fitsStamp)) {
+                    batches.push(currentBatch);
+                    currentBatch = [code];
+                } else {
+                    currentBatch = candidate;
+                }
+            });
+
+            if (currentBatch.length) batches.push(currentBatch);
+            return batches;
+        }
+
+        function mapEcsTargetsToPhotoBatches(saveTargets, requestedCodeBatches) {
+            const targets = saveTargets || [];
+            const targetByCode = new Map(targets.map(target => [target.ecsCode, target]));
+            const codeBatches = requestedCodeBatches && requestedCodeBatches.length
+                ? requestedCodeBatches
+                : [targets.map(target => target.ecsCode)];
+            const photoBatches = codeBatches
+                .map(batchCodes => batchCodes
+                    .map(code => targetByCode.get(code))
+                    .filter(Boolean))
+                .filter(batch => batch.length);
+            const assignedCodeIds = new Set(
+                photoBatches.flat().map(target => target.codeId)
+            );
+            const unassignedTargets = targets.filter(target =>
+                !assignedCodeIds.has(target.codeId)
+            );
+
+            if (unassignedTargets.length) photoBatches.push(unassignedTargets);
+            if (!photoBatches.length && targets.length) photoBatches.push(targets);
+            return photoBatches;
+        }
+
+        function buildUniquePhotoFilename(photo, usedFilenames) {
+            const ts = new Date(photo.timestamp);
+            const dd = String(ts.getDate()).padStart(2, '0');
+            const mm = String(ts.getMonth() + 1).padStart(2, '0');
+            const yy = String(ts.getFullYear()).slice(-2);
+            const hh = String(ts.getHours()).padStart(2, '0');
+            const min = String(ts.getMinutes()).padStart(2, '0');
+            const ss = String(ts.getSeconds()).padStart(2, '0');
+            const timestampPart = `${dd}${mm}${yy}-${hh}${min}${ss}`;
+            const extension = '.jpg';
+
+            const roomPart = sanitizePhotoFilenamePart(photo.roomName) || 'room';
+            const ecsPart = sanitizePhotoFilenamePart(photo.exportEcsCode || photo.ecsCode) || 'ecs';
+            const rawPrefix = `${roomPart}-${ecsPart}`;
+            let sequence = 1;
+            let filename = '';
+
+            // Compare case-insensitively because Windows filenames are normally
+            // case-insensitive. Recalculate the available prefix for "_2", "_3", etc.
+            do {
+                const sequenceSuffix = sequence > 1 ? `_${sequence}` : '';
+                const reservedLength = 1 + timestampPart.length + sequenceSuffix.length + extension.length;
+                const maxPrefixLength = Math.max(1, MAX_PHOTO_FILENAME_LENGTH - reservedLength);
+                const prefix = rawPrefix.slice(0, maxPrefixLength).replace(/[_\-]+$/g, '') || 'photo';
+                filename = `${prefix}-${timestampPart}${sequenceSuffix}${extension}`;
+                sequence += 1;
+            } while (usedFilenames.has(filename.toLowerCase()));
+
+            usedFilenames.add(filename.toLowerCase());
+            return filename;
+        }
+
         // ── Download ALL photos as ZIP ────────────────────────────────────
         async function downloadAllPhotosZip() {
             const photos = await getAllPhotos();
@@ -10355,30 +10543,40 @@ function renderFlexBarcodeRows() {
                 photosForZip.push(photo);
             });
 
-            showMessageModal('Preparing ZIP', `Bundling ${photosForZip.length} photo(s)… please wait.`);
+            // Older grouped records may still contain more ECS codes than a safe
+            // filename can hold. Export those as repeated image entries with
+            // filename-safe ECS subsets; newly captured records are already batched.
+            const zipPhotos = [];
+            photosForZip.forEach(photo => {
+                const groupedCodes = getUniqueEcsCodes(photo.groupEcsCodes);
+                const exportBatches = groupedCodes.length > 1
+                    ? splitEcsCodesIntoPhotoBatches(groupedCodes, photo.roomName, [], true)
+                    : [];
+
+                if (exportBatches.length <= 1) {
+                    zipPhotos.push(photo);
+                    return;
+                }
+
+                exportBatches.forEach(batchCodes => {
+                    zipPhotos.push({
+                        ...photo,
+                        exportEcsCode: batchCodes.join('_'),
+                        groupEcsCodes: batchCodes
+                    });
+                });
+            });
+
+            showMessageModal('Preparing ZIP', `Bundling ${zipPhotos.length} photo(s)… please wait.`);
 
             try {
                 const zip = new JSZip();
                 const folder = zip.folder('inspection_photos');
 
-                const filenameCounts = {};
-                photosForZip.forEach((photo, i) => {
+                const usedFilenames = new Set();
+                zipPhotos.forEach(photo => {
                     const base64 = photo.dataUrl.split(',')[1];
-                    const safe = (str) => String(str || '').replace(/[^a-z0-9_\-]/gi, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
-                    const ts = new Date(photo.timestamp);
-                    const dd = String(ts.getDate()).padStart(2, '0');
-                    const mm = String(ts.getMonth() + 1).padStart(2, '0');
-                    const yy = String(ts.getFullYear()).slice(-2);
-                    const hh = String(ts.getHours()).padStart(2, '0');
-                    const min = String(ts.getMinutes()).padStart(2, '0');
-                    const ss = String(ts.getSeconds()).padStart(2, '0');
-                    // Include full timestamp (HHMMSS) so each photo gets a unique name
-                    const ecsNameForExport = photo.exportEcsCode || photo.ecsCode;
-                    const baseFilename = `${safe(photo.roomName)}-${safe(ecsNameForExport)}-${dd}${mm}${yy}-${hh}${min}${ss}`;
-                    // Also track count per base name to handle photos taken in the same second
-                    filenameCounts[baseFilename] = (filenameCounts[baseFilename] || 0) + 1;
-                    const suffix = filenameCounts[baseFilename] > 1 ? `_${filenameCounts[baseFilename]}` : '';
-                    const filename = `${baseFilename}${suffix}.jpg`;
+                    const filename = buildUniquePhotoFilename(photo, usedFilenames);
                     folder.file(filename, base64, { base64: true });
                 });
 
@@ -10395,7 +10593,7 @@ function renderFlexBarcodeRows() {
 
                 // Close the "preparing" modal and show success
                 setTimeout(() => {
-                    showMessageModal('Download Ready', `${photos.length} photo(s) downloaded as ZIP.\n\nOn iPhone: tap Share in Safari → Save to Files, then open in OneDrive.`);
+                    showMessageModal('Download Ready', `${zipPhotos.length} photo(s) downloaded as ZIP.\n\nOn iPhone: tap Share in Safari → Save to Files, then open in OneDrive.`);
                 }, 300);
             } catch(err) {
                 console.error('ZIP failed:', err);
@@ -10923,6 +11121,7 @@ function renderFlexBarcodeRows() {
             const input = document.getElementById('stampExtraEcsInput');
             const suggestions = document.getElementById('stampExtraEcsSuggestions');
             const selected = document.getElementById('stampExtraEcsSelected');
+            const batchSummary = document.getElementById('stampBatchSummary');
             if (panel) panel.classList.remove('active');
             if (input) {
                 input.value = '';
@@ -10936,6 +11135,10 @@ function renderFlexBarcodeRows() {
                 suggestions.classList.remove('open');
             }
             if (selected) selected.innerHTML = '';
+            if (batchSummary) {
+                batchSummary.textContent = '';
+                batchSummary.classList.remove('visible');
+            }
         }
 
         function getStampSelectedEcsCodes() {
@@ -10944,6 +11147,21 @@ function renderFlexBarcodeRows() {
                 _stampEditorState.ecsCode,
                 ...((_stampEditorState.extraEcsTargets || []).map(target => target.ecsCode))
             ];
+        }
+
+        function updateStampBatchSummary(batches, selectedCodeCount) {
+            const summary = document.getElementById('stampBatchSummary');
+            if (!summary) return;
+
+            if (!batches || batches.length <= 1) {
+                summary.textContent = '';
+                summary.classList.remove('visible');
+                return;
+            }
+
+            summary.textContent = `${selectedCodeCount} ECS codes will be saved as ${batches.length} ` +
+                `copies of this photo. Each copy gets its own readable stamp and Windows-safe filename.`;
+            summary.classList.add('visible');
         }
 
         // Lightweight width estimate used before the canvas exists at final size.
@@ -10969,8 +11187,8 @@ function renderFlexBarcodeRows() {
 
             const lines = [];
             let current = [];
-            const maxLineWeight = 34;
-            const maxSegmentsPerLine = 4;
+            const maxLineWeight = 30;
+            const maxSegmentsPerLine = 3;
 
             segments.forEach(segment => {
                 const candidate = [...current, segment].join(' / ');
@@ -10994,26 +11212,75 @@ function renderFlexBarcodeRows() {
             return !!line && (line.id === 'line-ecs' || String(line.id || '').startsWith('line-ecs-'));
         }
 
+        function shouldSplitStampLocation(roomName, codes) {
+            const uniqueCodes = getUniqueEcsCodes(codes);
+            if (uniqueCodes.length > 1) return true;
+            const combinedText = `Room: ${roomName}   ECS: ${formatEcsCodesForStamp(uniqueCodes)}`;
+            return getEcsStampTextWeight(combinedText) > 44;
+        }
+
+        function buildStampLinesForEcsBatch(sourceLines, roomName, codes) {
+            const batchCodes = getUniqueEcsCodes(codes);
+            const oldEcsLines = (sourceLines || []).filter(isStampEcsLine);
+            const lines = (sourceLines || [])
+                .filter(line => !isStampEcsLine(line))
+                .map(line => ({ ...line }));
+            const roomLine = lines.find(line => line.id === 'line-room');
+            if (!roomLine) return lines;
+
+            if (shouldSplitStampLocation(roomName, batchCodes)) {
+                roomLine.label = 'Room';
+                roomLine.text = `Room: ${roomName}`;
+                const roomIndex = lines.indexOf(roomLine);
+                const ecsLines = buildEcsStampLineTexts(batchCodes).map((text, index) => {
+                    const oldLine = oldEcsLines[index] || {};
+                    return {
+                        id: `line-ecs-${index}`,
+                        label: 'ECS',
+                        text,
+                        on: oldLine.on !== false,
+                        bold: true,
+                        color: oldLine.color || '#ffffff',
+                        small: true
+                    };
+                });
+                lines.splice(roomIndex + 1, 0, ...ecsLines);
+            } else {
+                roomLine.label = 'Location';
+                roomLine.text = `Room: ${roomName}   ECS: ${formatEcsCodesForStamp(batchCodes)}`;
+            }
+
+            return lines;
+        }
+
         /**
-         * Keep the stamp editor rows aligned with the selected ECS group.
-         * 1-2 ECS codes stay on the Location line; 3+ split into Room plus
-         * generated ECS rows, with extra rows added as the group becomes longer.
+         * Keep the editor preview aligned with the first filename/stamp-safe copy.
+         * The remaining selected codes are rendered into additional copies on save.
          */
         function syncStampLocationLines(lines) {
             if (!_stampEditorState) return false;
 
             const selectedCodes = getStampSelectedEcsCodes() || [];
-            const ecsText = formatEcsCodesForStamp(selectedCodes);
+            const batches = splitEcsCodesIntoPhotoBatches(
+                selectedCodes,
+                _stampEditorState.roomName,
+                lines
+            );
+            const previewCodes = batches[0] || selectedCodes;
+            const ecsText = formatEcsCodesForStamp(previewCodes);
             const roomLine = lines.find(item => item.id === 'line-room');
             if (!roomLine) return false;
 
-            const splitLocation = selectedCodes.length > 2;
+            _stampEditorState.ecsCodeBatches = batches;
+            updateStampBatchSummary(batches, selectedCodes.length);
+
+            const splitLocation = shouldSplitStampLocation(_stampEditorState.roomName, previewCodes);
             let structureChanged = false;
 
             if (splitLocation) {
                 roomLine.label = 'Room';
                 roomLine.text = `Room: ${_stampEditorState.roomName}`;
-                const ecsLineTexts = buildEcsStampLineTexts(selectedCodes);
+                const ecsLineTexts = buildEcsStampLineTexts(previewCodes);
                 const oldEcsLines = lines.filter(isStampEcsLine);
 
                 structureChanged = true;
@@ -11247,7 +11514,8 @@ function renderFlexBarcodeRows() {
                 ecsCode,
                 codeId,
                 stampContext,
-                extraEcsTargets: []
+                extraEcsTargets: [],
+                ecsCodeBatches: []
             };
 
             syncStampLocationLines(lines);
@@ -11430,9 +11698,15 @@ function renderFlexBarcodeRows() {
         }
 
         /** Wire the drag handle on the preview canvas to reposition the stamp bar */
-        function renderStampPreview(canvas, lines, rawDataUrl) {
+        async function renderStampPreview(canvas, lines, rawDataUrl) {
             const img = new Image();
-            img.onload = function() {
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = () => reject(new Error('Could not load the photo for stamping.'));
+                img.src = rawDataUrl;
+            });
+
+            try {
                 // ── Resize: cap longest side at 1920px (matches stampPhoto logic) ──
                 // This ensures the saved JPEG is ~300–500 KB instead of 4–5 MB.
                 const MAX_LONG = 1920;
@@ -11448,7 +11722,9 @@ function renderFlexBarcodeRows() {
                 // Consecutive extra fields (line-extra-*) are merged two-per-line;
                 // all other lines (room, status, time) render individually.
                 const allActive = lines.filter(l => l.on && l.text.trim());
-                if (!allActive.length) return;
+                if (!allActive.length) {
+                    return;
+                }
 
                 const renderLines = [];
                 let idx = 0;
@@ -11546,8 +11822,20 @@ function renderFlexBarcodeRows() {
                     ctx.fillText(line.text, pad, y + lineH / 2);
                     y += lineH;
                 });
-            };
-            img.src = rawDataUrl;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function renderEcsStampCopy(stampBatchData, batchCodes) {
+            const canvas = document.createElement('canvas');
+            const lines = buildStampLinesForEcsBatch(
+                stampBatchData.lines,
+                stampBatchData.roomName,
+                batchCodes
+            );
+            await renderStampPreview(canvas, lines, stampBatchData.rawDataUrl);
+            return canvas.toDataURL('image/jpeg', 0.88);
         }
 
         /**
@@ -11573,8 +11861,23 @@ function renderFlexBarcodeRows() {
             const finalUrl = canvasToDataUrl();
             const cb = _stampEditorState.onSave;
             const extraEcsTargets = (_stampEditorState.extraEcsTargets || []).map(target => ({ ...target }));
+            const isEcsBatch = _stampEditorState.stampContext &&
+                _stampEditorState.stampContext.flow === 'ecs';
+            const selectedCodes = isEcsBatch ? (getStampSelectedEcsCodes() || []) : [];
+            const stampBatchData = isEcsBatch
+                ? {
+                    rawDataUrl: _stampEditorState.rawDataUrl,
+                    roomName: _stampEditorState.roomName,
+                    lines: _stampEditorState.lines.map(line => ({ ...line })),
+                    ecsCodeBatches: splitEcsCodesIntoPhotoBatches(
+                        selectedCodes,
+                        _stampEditorState.roomName,
+                        _stampEditorState.lines
+                    )
+                }
+                : null;
             closeStampEditor();
-            cb(finalUrl, extraEcsTargets);
+            cb(finalUrl, extraEcsTargets, stampBatchData);
         });
 
         // Retake button
