@@ -7699,7 +7699,12 @@ barcodeWrapper.appendChild(barcodeInput);
             function refreshSuggestions(query) {
                 suggestions.innerHTML = '';
                 const q = query.trim().toLowerCase();
-                const available = allCodesForRoom.filter(c => !usedCodes.has(c));
+                const currentUsedCodes = new Set(
+                    getEcsQuickEntryState().state.confirmedCodes
+                );
+                const available = allCodesForRoom.filter(
+                    code => !currentUsedCodes.has(code)
+                );
                 const matches = q
                     ? available.filter(c => c.toLowerCase().includes(q))
                     : available;
@@ -8483,7 +8488,11 @@ barcodeWrapper.appendChild(barcodeInput);
             });
             saveDataToStorage();
 
-            updateCodeCheckStates();
+            if (appState.ecsQuickEntryMode) {
+                renderEcsQuickEntryMode();
+            } else {
+                updateCodeCheckStates();
+            }
             if (choices.some(choice => choice.list.role === 'status' || choice.list.role === 'comment')) {
                 _showCameraForCodeIds(targetIds);
             }
