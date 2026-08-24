@@ -3187,7 +3187,7 @@
             transform: translateX(-50%) scale(1);
             transform-origin: center bottom;
             display: grid;
-            grid-template-columns: repeat(6, minmax(0, 1fr));
+            grid-template-columns: repeat(var(--bottom-nav-visible-count, 1), minmax(0, 1fr));
             align-items: center;
             gap: 4px;
             background: rgba(255, 255, 255, 0.96);
@@ -3231,6 +3231,7 @@
         .bottom-nav-btn span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 9px; font-weight: 700; letter-spacing: 0; white-space: nowrap; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
         .bottom-nav-btn.nav-active { color: #FF6B00; background: #fff1e8; }
         .bottom-nav-btn.nav-complete { color: #1b8f45; background: #eaf8ef; }
+        .bottom-nav-btn[hidden] { display: none !important; }
         .bottom-nav-desktop-btn { display: none; }
         .bottom-nav-divider { display: none; }
         .bottom-nav-more-sheet {
@@ -3644,6 +3645,7 @@ Room Codes (Room- Codes)
                         <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn" data-click-target="downloadJsonCodeCheckPage" aria-label="Download JSON"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>JSON</span></button>
                         <button type="button" class="bottom-nav-btn bottom-nav-desktop-btn bottom-nav-danger" data-click-target="backToCodeInput" aria-label="Back to Input"><svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg><span>Back</span></button>
                         <button class="bottom-nav-btn bottom-nav-more-btn" type="button" aria-label="More options" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg><span>More</span></button>
+                        <button id="ecsBackToTop" class="bottom-nav-btn" type="button" aria-label="Back to top of ECS Inspection" hidden><svg viewBox="0 0 24 24"><polyline points="6 11 12 5 18 11"/><polyline points="6 18 12 12 18 18"/></svg><span>Top</span></button>
                     </nav>
                     <div class="bottom-nav-scrim" aria-hidden="true"></div>
                     <div class="bottom-nav-more-sheet" role="dialog" aria-label="More options" aria-modal="true">
@@ -13006,6 +13008,15 @@ function renderFlexBarcodeRows() {
         (function () {
             'use strict';
 
+            function updateBottomNavColumns(nav) {
+                const visibleCount = Array.from(nav.querySelectorAll(".bottom-nav-btn")).filter(function (button) {
+                    if (button.hidden) return false;
+                    const style = window.getComputedStyle(button);
+                    return style.display !== "none" && style.visibility !== "hidden";
+                }).length;
+                nav.style.setProperty("--bottom-nav-visible-count", Math.max(visibleCount, 1));
+            }
+
             function closeSheet(sheet, scrim, btn) {
                 sheet.classList.remove('sheet-open');
                 scrim.classList.remove('scrim-visible');
@@ -13020,6 +13031,15 @@ function renderFlexBarcodeRows() {
                 const moreBtn = navPage.querySelector('.bottom-nav-more-btn');
                 let scrollTimer = null;
                 let lastY = window.scrollY;
+
+                updateBottomNavColumns(nav);
+                new MutationObserver(function () { updateBottomNavColumns(nav); }).observe(nav, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ["hidden", "class"]
+                });
+                window.addEventListener("resize", function () { updateBottomNavColumns(nav); }, { passive: true });
 
                 window.addEventListener('scroll', function () {
                     const y = window.scrollY;
@@ -13050,6 +13070,61 @@ function renderFlexBarcodeRows() {
                     if (event.key === 'Escape') closeSheet(sheet, scrim, moreBtn);
                 });
             });
+
+            const ecsPage = document.getElementById("codeCheckPage");
+            const ecsContainer = document.getElementById("codeChecksContainer");
+            const ecsTopButton = document.getElementById("ecsBackToTop");
+            const ecsHeader = ecsPage && ecsPage.querySelector(".code-header");
+            const ecsNav = ecsPage && ecsPage.querySelector(".bottom-nav-actions");
+            const MIN_RENDERED_ECS_ROWS = 10;
+            const ECS_ROWS_BEFORE_TOP_BUTTON = 8;
+            let ecsTopUpdatePending = false;
+
+            function updateEcsTopButton() {
+                ecsTopUpdatePending = false;
+                if (!ecsPage || !ecsContainer || !ecsTopButton || !ecsHeader || !ecsNav) return;
+
+                const selector = appState.ecsQuickEntryMode
+                    ? ".ecs-quick-entry-row.confirmed"
+                    : ".grid-row";
+                const rows = Array.from(ecsContainer.querySelectorAll(selector));
+                const ecsIsVisible = ecsPage.getClientRects().length > 0;
+                const searchIsActive = ecsPage.classList.contains("ecs-inline-search-active");
+                const thresholdRow = rows[ECS_ROWS_BEFORE_TOP_BUTTON - 1];
+                const hasPassedRows = !!thresholdRow && thresholdRow.getBoundingClientRect().bottom <= 0;
+                const shouldShow = ecsIsVisible
+                    && !searchIsActive
+                    && rows.length >= MIN_RENDERED_ECS_ROWS
+                    && hasPassedRows;
+
+                if (ecsTopButton.hidden === shouldShow) {
+                    ecsTopButton.hidden = !shouldShow;
+                    updateBottomNavColumns(ecsNav);
+                }
+            }
+
+            function scheduleEcsTopButtonUpdate() {
+                if (ecsTopUpdatePending) return;
+                ecsTopUpdatePending = true;
+                window.requestAnimationFrame(updateEcsTopButton);
+            }
+
+            if (ecsPage && ecsContainer && ecsTopButton && ecsHeader) {
+                ecsTopButton.addEventListener("click", function () {
+                    ecsHeader.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+                window.addEventListener("scroll", scheduleEcsTopButtonUpdate, { passive: true });
+                window.addEventListener("resize", scheduleEcsTopButtonUpdate, { passive: true });
+                new MutationObserver(scheduleEcsTopButtonUpdate).observe(ecsContainer, {
+                    childList: true,
+                    subtree: true
+                });
+                new MutationObserver(scheduleEcsTopButtonUpdate).observe(ecsPage, {
+                    attributes: true,
+                    attributeFilter: ["class"]
+                });
+                scheduleEcsTopButtonUpdate();
+            }
         })();
     </script>
 
