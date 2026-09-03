@@ -1074,6 +1074,15 @@
             letter-spacing: 0.6px;
             line-height: 1.2;
             min-height: 14px;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .status-options .status-option {
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .status-button::after {
@@ -4543,6 +4552,48 @@ rooms: [],
         //   data-role="extra-btn-${list.id}"      (dropdown button)
         //   data-role="extra-options-${list.id}"  (dropdown options panel)
         //   data-role="extra-text" + data-list-id + data-code-id (text input)
+        function hasMeaningfulEcsValue(value) {
+            if (value === null || value === undefined) return false;
+            return typeof value !== 'string' || value.trim() !== '';
+        }
+
+        // Single source of truth for ECS Camera eligibility. Read stored state,
+        // not rendered control text, so imports and both render modes agree.
+        function ecsRowHasInspectionData(codeId) {
+            if (!codeId) return false;
+            if (hasMeaningfulEcsValue(appState.checkData && appState.checkData[codeId])) return true;
+            if (hasMeaningfulEcsValue(appState.codeSpecificComments && appState.codeSpecificComments[codeId])) return true;
+            const lists = Array.isArray(appState.ecsDropdownLists) ? appState.ecsDropdownLists : [];
+            return lists.some(list => {
+                if (!list || list.role !== 'extra' || !list.id) return false;
+                const values = appState.ecsExtraData && appState.ecsExtraData[list.id];
+                return hasMeaningfulEcsValue(values && values[codeId]);
+            });
+        }
+
+        function syncEcsCameraForCodeId(codeId) {
+            if (!codeId) return;
+            const eligible = ecsRowHasInspectionData(codeId);
+            document.querySelectorAll('#codeChecksContainer .grid-row, #codeChecksContainer .ecs-quick-entry-row.confirmed').forEach(row => {
+                const control = row.querySelector('[data-code-id]');
+                if (!control || control.dataset.codeId !== codeId) return;
+                if (!eligible) {
+                    const cameraRow = row.querySelector('.camera-row');
+                    if (cameraRow) cameraRow.remove();
+                    return;
+                }
+                const quick = row.classList.contains('ecs-quick-entry-row');
+                const codeEl = quick ? row.querySelector('.ecs-confirmed-code') : row.querySelector('.grid-cell.code-cell');
+                const code = codeEl ? codeEl.textContent.trim() : codeId;
+                const room = row.dataset.roomName || Object.keys(appState.roomCodes || {})[appState.currentCodeRoomIndex] || '';
+                addCameraButtonToRow(row, codeId, room, code, quick);
+            });
+        }
+
+        function syncEcsCameraForCodeIds(codeIds) {
+            [...new Set((codeIds || []).filter(Boolean))].forEach(syncEcsCameraForCodeId);
+        }
+
         function appendEcsExtraListColumns(controlsRow, uniqueCodeId, roleControls = {}) {
             const allLists = getEcsDropdownLists();
 
@@ -4611,6 +4662,7 @@ rooms: [],
                         clearOpt.style.display = 'none';
                         extraOptionsDiv.classList.remove('active');
                         saveDataToStorage();
+                        syncEcsCameraForCodeId(uniqueCodeId);
                     });
                     extraOptionsDiv.appendChild(clearOpt);
 
@@ -4626,6 +4678,7 @@ rooms: [],
                             clearOpt.style.display = 'block';
                             extraOptionsDiv.classList.remove('active');
                             saveDataToStorage();
+                            syncEcsCameraForCodeId(uniqueCodeId);
                         });
                         extraOptionsDiv.appendChild(optDiv);
                     });
@@ -7376,15 +7429,13 @@ barcodeWrapper.appendChild(barcodeInput);
             const { roomName, state } = getEcsQuickEntryState();
             const allCodesForRoom = appState.roomCodes[roomName] || [];
 
-            // ── Sync: ensure any code that has a saved status or comment is
-            //    already in confirmedCodes, even if it was set via List view.
+            // ── Sync: ensure any code with saved inspection data is already
+            //    in confirmedCodes, even if it was set via List view/import.
             const alreadyConfirmed = new Set(state.confirmedCodes);
             allCodesForRoom.forEach(code => {
                 if (alreadyConfirmed.has(code)) return;
                 const uid = `${roomName}-${code}`;
-                const hasStatus = appState.checkData[uid] !== null && appState.checkData[uid] !== undefined;
-                const hasComment = !!(appState.codeSpecificComments && appState.codeSpecificComments[uid]);
-                if (hasStatus || hasComment) {
+                if (ecsRowHasInspectionData(uid)) {
                     state.confirmedCodes.push(code);
                     alreadyConfirmed.add(code);
                 }
@@ -7467,6 +7518,11 @@ barcodeWrapper.appendChild(barcodeInput);
                 const uid = `${rn}-${code}`;
                 if (appState.checkData) appState.checkData[uid] = null;
                 if (appState.codeSpecificComments) appState.codeSpecificComments[uid] = '';
+                (Array.isArray(appState.ecsDropdownLists) ? appState.ecsDropdownLists : []).forEach(list => {
+                    if (list && list.role === 'extra' && appState.ecsExtraData && appState.ecsExtraData[list.id]) {
+                        delete appState.ecsExtraData[list.id][uid];
+                    }
+                });
                 saveDataToStorage();
                 renderEcsQuickEntryMode();
                 // Scroll to the new input after remove
@@ -7637,12 +7693,10 @@ barcodeWrapper.appendChild(barcodeInput);
 
             row.appendChild(controlsRow);
 
-            // ── Camera button (icon only) — only shown if this code already has status or comment ──
+            // ── Camera button (icon only) — uses the shared state rule ──
             // We call addCameraButtonToRow but pass a flag to use icon-only style.
             // Use setTimeout so the row is in the DOM before we query it.
-            const hasStatus = appState.checkData[uniqueCodeId] !== null && appState.checkData[uniqueCodeId] !== undefined;
-            const hasComment = !!(appState.codeSpecificComments && appState.codeSpecificComments[uniqueCodeId]);
-            if (hasStatus || hasComment) {
+            if (ecsRowHasInspectionData(uniqueCodeId)) {
                 setTimeout(() => addCameraButtonToRow(row, uniqueCodeId, roomName, code, true), 0);
             }
 
@@ -7962,6 +8016,7 @@ barcodeWrapper.appendChild(barcodeInput);
             // Refresh the clear option visibility in this panel
             refreshClearOption(statusOptionsPanel, appState.checkData[codeId] !== null && appState.checkData[codeId] !== undefined);
             saveDataToStorage();
+            syncEcsCameraForCodeId(codeId);
         }
 
         // Close status AND comment options when clicking outside
@@ -8052,6 +8107,7 @@ barcodeWrapper.appendChild(barcodeInput);
                     }
                 }
                 saveDataToStorage();
+                syncEcsCameraForCodeId(codeId);
                 return;
             }
 
@@ -8101,6 +8157,7 @@ barcodeWrapper.appendChild(barcodeInput);
 
             if (optionsPanel) optionsPanel.classList.remove('active');
             refreshClearOption(optionsPanel, true);
+            syncEcsCameraForCodeId(codeId);
         }
 
         // Room status functions
@@ -10746,10 +10803,19 @@ function renderFlexBarcodeRows() {
         const DB_VERSION = 1;
         const STORE_NAME = 'photos';
         let photoDB = null;
+        let photoDBOpenPromise = null;
+
+        function invalidatePhotoDB(db = photoDB) {
+            if (!db) return;
+            try { db.close(); } catch(e) { /* already closed */ }
+            if (photoDB === db) photoDB = null;
+        }
 
         function openPhotoDB() {
-            return new Promise((resolve, reject) => {
-                if (photoDB) { resolve(photoDB); return; }
+            if (photoDB) return Promise.resolve(photoDB);
+            if (photoDBOpenPromise) return photoDBOpenPromise;
+
+            photoDBOpenPromise = new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, DB_VERSION);
                 req.onupgradeneeded = e => {
                     const db = e.target.result;
@@ -10758,9 +10824,39 @@ function renderFlexBarcodeRows() {
                         store.createIndex('codeId', 'codeId', { unique: false });
                     }
                 };
-                req.onsuccess = e => { photoDB = e.target.result; resolve(photoDB); };
+                req.onsuccess = e => {
+                    const db = e.target.result;
+                    db.onversionchange = () => invalidatePhotoDB(db);
+                    // WebKit can close an IndexedDB connection while a PWA is
+                    // suspended. Clear the cached handle so the next operation
+                    // opens a live connection instead of reusing the dead one.
+                    if ('onclose' in db) db.onclose = () => {
+                        if (photoDB === db) photoDB = null;
+                    };
+                    photoDB = db;
+                    resolve(db);
+                };
                 req.onerror = e => reject(e.target.error);
+                req.onblocked = () => reject(new Error('Photo storage is blocked by another app window.'));
+            }).finally(() => {
+                photoDBOpenPromise = null;
             });
+
+            return photoDBOpenPromise;
+        }
+
+        async function withPhotoDBRetry(operation) {
+            let lastError = null;
+            for (let attempt = 0; attempt < 2; attempt += 1) {
+                const db = await openPhotoDB();
+                try {
+                    return await operation(db);
+                } catch(error) {
+                    lastError = error;
+                    invalidatePhotoDB(db);
+                }
+            }
+            throw lastError || new Error('Photo storage is unavailable.');
         }
 
         /**
@@ -10769,8 +10865,7 @@ function renderFlexBarcodeRows() {
          * can show the photo, but options carries the grouped export/display name.
          */
         async function savePhoto(codeId, roomName, ecsCode, dataUrl, options = {}) {
-            const db = await openPhotoDB();
-            return new Promise((resolve, reject) => {
+            return withPhotoDBRetry(db => new Promise((resolve, reject) => {
                 const now = new Date();
                 const labelEcsCode = options.displayEcsCode || ecsCode;
                 const record = {
@@ -10786,9 +10881,13 @@ function renderFlexBarcodeRows() {
                 };
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const req = tx.objectStore(STORE_NAME).add(record);
-                req.onsuccess = () => resolve(req.result);
+                let savedId = null;
+                req.onsuccess = () => { savedId = req.result; };
                 req.onerror = e => reject(e.target.error);
-            });
+                tx.oncomplete = () => resolve(savedId);
+                tx.onerror = event => reject(tx.error || event.target.error);
+                tx.onabort = event => reject(tx.error || event.target.error);
+            }));
         }
 
         // Store every ECS link for one physical photo copy in one transaction.
@@ -10797,8 +10896,7 @@ function renderFlexBarcodeRows() {
             const safeTargets = (targets || []).filter(Boolean);
             if (!safeTargets.length) return [];
 
-            const db = await openPhotoDB();
-            return new Promise((resolve, reject) => {
+            return withPhotoDBRetry(db => new Promise((resolve, reject) => {
                 const now = new Date();
                 const savedIds = [];
                 const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -10823,50 +10921,50 @@ function renderFlexBarcodeRows() {
                 tx.oncomplete = () => resolve(savedIds);
                 tx.onerror = event => reject(tx.error || event.target.error);
                 tx.onabort = event => reject(tx.error || event.target.error);
-            });
+            }));
         }
 
         async function getPhotosByCodeId(codeId) {
-            const db = await openPhotoDB();
-            return new Promise((resolve, reject) => {
+            return withPhotoDBRetry(db => new Promise((resolve, reject) => {
                 const tx = db.transaction(STORE_NAME, 'readonly');
                 const index = tx.objectStore(STORE_NAME).index('codeId');
                 const req = index.getAll(codeId);
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = e => reject(e.target.error);
-            });
+            }));
         }
 
         async function getAllPhotos() {
-            const db = await openPhotoDB();
-            return new Promise((resolve, reject) => {
+            return withPhotoDBRetry(db => new Promise((resolve, reject) => {
                 const tx = db.transaction(STORE_NAME, 'readonly');
                 const req = tx.objectStore(STORE_NAME).getAll();
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = e => reject(e.target.error);
-            });
+            }));
         }
 
         async function deletePhoto(id) {
-            const db = await openPhotoDB();
-            return new Promise((resolve, reject) => {
+            return withPhotoDBRetry(db => new Promise((resolve, reject) => {
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const req = tx.objectStore(STORE_NAME).delete(id);
-                req.onsuccess = () => resolve();
                 req.onerror = e => reject(e.target.error);
-            });
+                tx.oncomplete = () => resolve();
+                tx.onerror = event => reject(tx.error || event.target.error);
+                tx.onabort = event => reject(tx.error || event.target.error);
+            }));
         }
 
         // Wipe every photo from IndexedDB — called on Reset Application
         async function clearAllPhotos() {
             try {
-                const db = await openPhotoDB();
-                await new Promise((resolve, reject) => {
+                await withPhotoDBRetry(db => new Promise((resolve, reject) => {
                     const tx = db.transaction(STORE_NAME, 'readwrite');
                     const req = tx.objectStore(STORE_NAME).clear();
-                    req.onsuccess = () => resolve();
                     req.onerror = e => reject(e.target.error);
-                });
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = event => reject(tx.error || event.target.error);
+                    tx.onabort = event => reject(tx.error || event.target.error);
+                }));
             } catch(e) {
                 console.warn('clearAllPhotos failed:', e);
             }
@@ -11042,6 +11140,44 @@ function renderFlexBarcodeRows() {
 
 
         // ── Add camera button to an ECS row ──────────────────────────────
+        let cameraInputIdSequence = 0;
+        const preparedPhotoInputs = new WeakSet();
+        let pendingPhotoPickerInput = null;
+        let photoPageHiddenAt = 0;
+        const PHOTO_CONTROL_STALE_AFTER_MS = 30000;
+
+        function nextCameraInputId(prefix) {
+            cameraInputIdSequence += 1;
+            return `${prefix}-${cameraInputIdSequence}`;
+        }
+
+        function preparePhotoInput(fileInput) {
+            if (!fileInput || preparedPhotoInputs.has(fileInput)) return;
+            preparedPhotoInputs.add(fileInput);
+
+            // Always clear before opening the picker. Without this, choosing the
+            // same image twice (or retaking after a cancelled edit) may not emit
+            // a change event, which looks exactly like a dead Camera button.
+            fileInput.addEventListener('click', function() {
+                fileInput.value = '';
+                pendingPhotoPickerInput = fileInput;
+                if (navigator.storage && typeof navigator.storage.persist === 'function') {
+                    navigator.storage.persist().catch(() => {});
+                }
+            }, true);
+        }
+
+        function settlePhotoPicker(fileInput) {
+            if (pendingPhotoPickerInput === fileInput) pendingPhotoPickerInput = null;
+        }
+
+        function handlePhotoReadFailure(fileInput, error) {
+            settlePhotoPicker(fileInput);
+            fileInput.value = '';
+            console.error('Could not read selected photo:', error);
+            showMessageModal('Photo Error', 'The selected photo could not be read. Please try the Camera button again.');
+        }
+
         function addCameraButtonToRow(rowDiv, uniqueCodeId, roomName, ecsCode, iconOnly) {
             // Avoid duplicates
             if (rowDiv.querySelector('.camera-row')) return;
@@ -11049,7 +11185,7 @@ function renderFlexBarcodeRows() {
             const cameraRow = document.createElement('div');
             cameraRow.className = 'camera-row';
 
-            const inputId = `cam-input-${uniqueCodeId.replace(/[^a-z0-9]/gi, '_')}`;
+            const inputId = nextCameraInputId('cam-input');
 
             const camLabel = document.createElement('label');
             camLabel.className = iconOnly ? 'camera-label icon-only' : 'camera-label';
@@ -11084,6 +11220,7 @@ function renderFlexBarcodeRows() {
             fileInput.setAttribute('capture', 'environment');
             fileInput.className = 'camera-file-input';
             fileInput.id = inputId;
+            preparePhotoInput(fileInput);
 
             camLabel.appendChild(camIcon);
             camLabel.appendChild(camText);
@@ -11122,6 +11259,7 @@ function renderFlexBarcodeRows() {
 
             // ── File input change: open stamp editor before saving ──
             fileInput.addEventListener('change', async function() {
+                settlePhotoPicker(fileInput);
                 const file = fileInput.files[0];
                 if (!file) return;
 
@@ -11243,6 +11381,8 @@ function renderFlexBarcodeRows() {
                         }
                     );
                 };
+                reader.onerror = () => handlePhotoReadFailure(fileInput, reader.error);
+                reader.onabort = () => handlePhotoReadFailure(fileInput, new Error('Photo read was cancelled.'));
                 reader.readAsDataURL(file);
             });
 
@@ -11432,40 +11572,12 @@ function renderFlexBarcodeRows() {
         });
         document.getElementById('photoModalDownloadAll').addEventListener('click', downloadAllPhotosZip);
 
-        // ── Hook into ECS status/comment selection via event delegation ──
-        // Listen on the codeChecksContainer for any click that results in
-        // a status or comment being picked, then show the camera button.
-        // This avoids any cross-script function shadowing issues.
-
-        document.addEventListener('click', function(e) {
-            // Only act inside the ECS check page container
-            const container = document.getElementById('codeChecksContainer');
-            if (!container || !container.contains(e.target)) return;
-
-            // Status option selected (not clear, not comment-options)
-            const statusOpt = e.target.closest('.status-option:not(.clear-option)');
-            if (statusOpt) {
-                const panel = statusOpt.closest('.status-options');
-                // Is this a status panel (not comment)?
-                if (panel && !panel.dataset.role) {
-                    const codeId = statusOpt.dataset.codeId;
-                    if (codeId) setTimeout(() => _showCameraForCodeId(codeId), 50);
-                }
-                // Is this a comment panel?
-                if (panel && panel.dataset.role === 'comment-options') {
-                    const codeId = statusOpt.dataset.codeId;
-                    if (codeId) setTimeout(() => _showCameraForCodeId(codeId), 50);
-                }
-            }
-        }, true); // capture phase so we fire before panels close
-
-        // Also trigger when a custom comment textarea gets input
+        // These target handlers have already saved state before bubbling here.
         document.addEventListener('input', function(e) {
-            if (!e.target.classList.contains('custom-comment-input')) return;
             const container = document.getElementById('codeChecksContainer');
             if (!container || !container.contains(e.target)) return;
-            const codeId = e.target.dataset.codeId;
-            if (codeId && e.target.value.trim()) setTimeout(() => _showCameraForCodeId(codeId), 50);
+            if (!e.target.matches('.custom-comment-input, [data-role="comment-text"], [data-role="extra-text"]')) return;
+            syncEcsCameraForCodeId(e.target.dataset.codeId);
         });
 
         // Inject camera buttons on room navigation (for codes already having data)
@@ -11474,19 +11586,7 @@ function renderFlexBarcodeRows() {
             const currentRoomName = Object.keys(appState.roomCodes)[appState.currentCodeRoomIndex];
             if (!currentRoomName) return;
             const codes = appState.roomCodes[currentRoomName] || [];
-            codes.forEach(code => {
-                const uid = `${currentRoomName}-${code}`;
-                const hasStatus = appState.checkData[uid] !== null && appState.checkData[uid] !== undefined;
-                const hasComment = !!(appState.codeSpecificComments[uid]);
-                if (hasStatus || hasComment) {
-                    document.querySelectorAll('#codeChecksContainer .grid-row').forEach(row => {
-                        const codeCell = row.querySelector('.grid-cell.code-cell');
-                        if (codeCell && codeCell.textContent.trim() === code) {
-                            addCameraButtonToRow(row, uid, currentRoomName, code);
-                        }
-                    });
-                }
-            });
+            syncEcsCameraForCodeIds(codes.map(code => currentRoomName + '-' + code));
         }
 
         // Patch generateCodeCheckItems via window assignment (works across script tags)
@@ -11497,31 +11597,7 @@ function renderFlexBarcodeRows() {
         };
 
         function _showCameraForCodeIds(codeIds) {
-            const requestedCodeIds = new Set((codeIds || []).filter(Boolean));
-            if (!requestedCodeIds.size) return;
-            const roomName = Object.keys(appState.roomCodes || {})[appState.currentCodeRoomIndex] || '';
-
-            // ── List view rows (.grid-row) ──
-            document.querySelectorAll('#codeChecksContainer .grid-row').forEach(row => {
-                const btn = row.querySelector('.status-button:not([data-role])[data-code-id]');
-                const codeId = btn ? btn.dataset.codeId : '';
-                if (requestedCodeIds.has(codeId)) {
-                    const codeCell = row.querySelector('.grid-cell.code-cell');
-                    const ecsCode = codeCell ? codeCell.textContent.trim() : codeId;
-                    addCameraButtonToRow(row, codeId, roomName, ecsCode);
-                }
-            });
-
-            // ── Search view confirmed rows (.ecs-quick-entry-row.confirmed) ──
-            document.querySelectorAll('#codeChecksContainer .ecs-quick-entry-row.confirmed').forEach(row => {
-                const btn = row.querySelector('.status-button:not([data-role])[data-code-id]');
-                const codeId = btn ? btn.dataset.codeId : '';
-                if (requestedCodeIds.has(codeId)) {
-                    const codeLabel = row.querySelector('.ecs-confirmed-code');
-                    const ecsCode = codeLabel ? codeLabel.textContent.trim() : (row.dataset.code || codeId);
-                    addCameraButtonToRow(row, codeId, roomName, ecsCode, true); // icon-only style for search view
-                }
-            });
+            syncEcsCameraForCodeIds(codeIds);
         }
 
         function _showCameraForCodeId(codeId) {
@@ -11621,8 +11697,10 @@ function renderFlexBarcodeRows() {
             // Remove the existing change listener (clone-replace trick)
             const newInput = fileInput.cloneNode(true);
             fileInput.parentNode.replaceChild(newInput, fileInput);
+            preparePhotoInput(newInput);
 
             newInput.addEventListener('change', async function() {
+                settlePhotoPicker(newInput);
                 const file = newInput.files[0];
                 if (!file) return;
 
@@ -11677,6 +11755,8 @@ function renderFlexBarcodeRows() {
                         }
                     );
                 };
+                reader.onerror = () => handlePhotoReadFailure(newInput, reader.error);
+                reader.onabort = () => handlePhotoReadFailure(newInput, new Error('Photo read was cancelled.'));
                 reader.readAsDataURL(file);
             });
         }
@@ -11757,7 +11837,7 @@ function renderFlexBarcodeRows() {
             const cameraRow = document.createElement('div');
             cameraRow.className = 'camera-row';
 
-            const inputId = 'cam-flex-' + codeId.replace(/[^a-z0-9]/gi, '_');
+            const inputId = nextCameraInputId('cam-flex');
 
             const camLabel = document.createElement('label');
             camLabel.className = 'camera-label';
@@ -11789,6 +11869,7 @@ function renderFlexBarcodeRows() {
             fileInput.setAttribute('capture', 'environment');
             fileInput.className = 'camera-file-input';
             fileInput.id = inputId;
+            preparePhotoInput(fileInput);
 
             camLabel.appendChild(camIcon);
             camLabel.appendChild(camText);
@@ -11824,6 +11905,7 @@ function renderFlexBarcodeRows() {
             refreshFlexCount();
 
             fileInput.addEventListener('change', async function() {
+                settlePhotoPicker(fileInput);
                 const file = fileInput.files[0];
                 if (!file) return;
 
@@ -11858,6 +11940,8 @@ function renderFlexBarcodeRows() {
                         }
                     );
                 };
+                reader.onerror = () => handlePhotoReadFailure(fileInput, reader.error);
+                reader.onabort = () => handlePhotoReadFailure(fileInput, new Error('Photo read was cancelled.'));
                 reader.readAsDataURL(file);
             });
 
@@ -11925,22 +12009,67 @@ function renderFlexBarcodeRows() {
             }, 80);
         });
 
+        // Mobile browsers may keep the page DOM while discarding the native
+        // file-picker and IndexedDB objects during a long background suspend.
+        // Recreate those browser-owned objects on resume so the application can
+        // recover without a network connection or a full page refresh.
+        function rebuildPhotoControlsAfterResume() {
+            if (typeof _stampEditorState !== 'undefined' && _stampEditorState) return;
 
-        // ── PWA Service Worker (inline) ───────────────────────────────────
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-    const CACHE = 'ecs-inspect-v1';
-    const ASSETS = [location.href];
-    self.addEventListener('install', e => {
-        e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
-    });
-    self.addEventListener('fetch', e => {
-        e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
-    });
-    `;
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swUrl).catch(() => {});
+            invalidatePhotoDB();
+
+            document.querySelectorAll('#codeChecksContainer .camera-row').forEach(row => row.remove());
+            injectCameraButtonsIntoRenderedRows();
+
+            document.querySelectorAll('#assetTagz2ChecksContainer .camera-row').forEach(row => row.remove());
+            injectAndPatchAt2Rows();
+
+            document.querySelectorAll('#flexBarcodeContainer .camera-row').forEach(row => row.remove());
+            injectCameraButtonsIntoFlexRows();
+        }
+
+        function resumePhotoSubsystem(force = false) {
+            const hiddenFor = photoPageHiddenAt ? Date.now() - photoPageHiddenAt : 0;
+            photoPageHiddenAt = 0;
+
+            // Returning from the actual camera/file picker also resumes the page.
+            // Keep that input connected until its change event has delivered the
+            // selected file; rebuilding it here would discard the new photo.
+            if (pendingPhotoPickerInput && pendingPhotoPickerInput.isConnected) {
+                const pickerInput = pendingPhotoPickerInput;
+                setTimeout(() => settlePhotoPicker(pickerInput), 1500);
+                return;
+            }
+            pendingPhotoPickerInput = null;
+
+            if (force || hiddenFor >= PHOTO_CONTROL_STALE_AFTER_MS) {
+                setTimeout(rebuildPhotoControlsAfterResume, 0);
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                photoPageHiddenAt = Date.now();
+            } else {
+                resumePhotoSubsystem(false);
+            }
+        });
+
+        window.addEventListener('pageshow', event => {
+            if (event.persisted) resumePhotoSubsystem(true);
+        });
+
+
+        // ── PWA Service Worker ────────────────────────────────────────────
+        // A service worker cannot be registered reliably from a blob: URL.
+        // Use the checked-in same-origin worker so the form can reopen after
+        // iOS/Android evicts the page while the phone is still offline.
+        if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => registration.update())
+                    .catch(error => console.warn('Offline mode could not be prepared:', error));
+            });
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -12515,11 +12644,28 @@ function renderFlexBarcodeRows() {
                 };
             }
 
-            renderStampPreview(canvas, lines, rawDataUrl);
-
             _stampEditorState._savedScrollY = window.scrollY;
-
             modal.classList.add('active');
+
+            const editorState = _stampEditorState;
+            const saveButton = document.getElementById('stampSaveBtn');
+            const originalSaveText = 'Save Photo';
+            saveButton.disabled = true;
+            saveButton.textContent = 'Preparing Photo…';
+            editorState.renderPromise = renderStampPreview(canvas, lines, rawDataUrl)
+                .then(() => {
+                    if (_stampEditorState !== editorState) return;
+                    saveButton.disabled = false;
+                    saveButton.textContent = originalSaveText;
+                })
+                .catch(error => {
+                    if (_stampEditorState !== editorState) return;
+                    console.error('Could not prepare photo preview:', error);
+                    closeStampEditor();
+                    saveButton.disabled = false;
+                    saveButton.textContent = originalSaveText;
+                    showMessageModal('Photo Error', 'The photo could not be prepared. Please take it again.');
+                });
         }
 
         /**
@@ -12821,6 +12967,9 @@ function renderFlexBarcodeRows() {
 
         function closeStampEditor() {
             document.getElementById('stampEditorModal').classList.remove('active');
+            const saveButton = document.getElementById('stampSaveBtn');
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save Photo';
             resetStampExtraEcsPanel();
             // Restore the scroll position the user was at before the editor opened
             const savedY = _stampEditorState && _stampEditorState._savedScrollY != null
@@ -12830,8 +12979,13 @@ function renderFlexBarcodeRows() {
         }
 
         // Save button
-        document.getElementById('stampSaveBtn').addEventListener('click', () => {
+        document.getElementById('stampSaveBtn').addEventListener('click', async () => {
             if (!_stampEditorState) return;
+            const editorState = _stampEditorState;
+            if (editorState.renderPromise) {
+                try { await editorState.renderPromise; } catch(e) { return; }
+            }
+            if (_stampEditorState !== editorState) return;
             const finalUrl = canvasToDataUrl();
             const cb = _stampEditorState.onSave;
             const extraEcsTargets = (_stampEditorState.extraEcsTargets || []).map(target => ({ ...target }));
