@@ -1,4 +1,4 @@
-const CACHE_NAME = 'live-form-shell-2026-09-03';
+const CACHE_NAME = 'live-form-shell-2026-09-03-r2';
 const APP_SHELL = ['./', './index.html', './new_test1506.html'];
 
 self.addEventListener('install', event => {

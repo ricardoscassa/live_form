@@ -9287,11 +9287,26 @@ barcodeWrapper.appendChild(barcodeInput);
             document.getElementById('resetModal').classList.remove('active');
         }
 
-        function confirmReset() {
+        async function confirmReset() {
             const type = document.getElementById('resetModal').dataset.type;
+            const resetButton = document.getElementById('confirmReset');
+            resetButton.disabled = true;
+            resetButton.textContent = 'Resetting…';
 
-            // Always clear photos from IndexedDB on any reset type
-            if (typeof clearAllPhotos === 'function') clearAllPhotos();
+            // State must remain untouched unless every photo has been deleted and
+            // a second IndexedDB read confirms that the store is empty.
+            try {
+                await clearAndVerifyAllPhotos();
+            } catch(error) {
+                console.error('Reset photo cleanup failed:', error);
+                resetButton.disabled = false;
+                resetButton.textContent = 'Reset';
+                showMessageModal(
+                    'Reset Failed',
+                    'The stored photos could not be completely removed. No inspection data was reset. Please try again.'
+                );
+                return;
+            }
 
             const clean = getCleanAppState();
 
@@ -9751,76 +9766,272 @@ barcodeWrapper.appendChild(barcodeInput);
             document.body.removeChild(ta);
         }
 
+        // ==========================================================================
+        //  UNIFIED INSPECTION REPLACEMENT — QR/shared link and manual JSON
+        // ==========================================================================
+
+        const OFFLINE_APP_CACHE_NAME = 'live-form-shell-2026-09-03-r2';
+        const REPLACE_INSPECTION_WARNING =
+            'Loading new inspection data will permanently delete all current inspection data and all photos stored on this device.\n\n' +
+            'Make sure you have exported anything you need before continuing.';
+
+        function objectHasValues(value) {
+            return !!value && typeof value === 'object' && Object.keys(value).length > 0;
+        }
+
+        function hasExistingInspectionState(state = appState) {
+            const at = state && state.assetTagz2;
+            const flex = state && state.flexibleInspections;
+            return !!(state && (
+                (Array.isArray(state.rooms) && state.rooms.length) ||
+                objectHasValues(state.roomCodes) ||
+                objectHasValues(state.checkData) ||
+                objectHasValues(state.roomStatus) ||
+                objectHasValues(state.codeSpecificComments) ||
+                objectHasValues(state.ecsExtraData) ||
+                objectHasValues(state.ecsQuickEntryState) ||
+                (Array.isArray(state.seStSvRooms) && state.seStSvRooms.length) ||
+                objectHasValues(state.seStSvData) ||
+                (at && (
+                    objectHasValues(at.roomCodes) || objectHasValues(at.statusByCodeId) ||
+                    objectHasValues(at.commentsByCodeId) || objectHasValues(at.barcodesByCodeId) ||
+                    (Array.isArray(at.barcodePresets) && at.barcodePresets.length)
+                )) ||
+                (flex && (
+                    (Array.isArray(flex.rooms) && flex.rooms.length) ||
+                    (Array.isArray(flex.unassignedBarcodes) && flex.unassignedBarcodes.length) ||
+                    objectHasValues(flex.assignments) ||
+                    (Array.isArray(flex.inspections) && flex.inspections.length) ||
+                    (Array.isArray(flex.ecsPresets) && flex.ecsPresets.length) ||
+                    objectHasValues(flex.locks)
+                ))
+            ));
+        }
+
+        function hasUsableInspectionContent(state) {
+            const at = state && state.assetTagz2;
+            const flex = state && state.flexibleInspections;
+            return !!(state && (
+                (Array.isArray(state.rooms) && state.rooms.length) ||
+                objectHasValues(state.roomCodes) ||
+                (Array.isArray(state.seStSvRooms) && state.seStSvRooms.length) ||
+                (at && objectHasValues(at.roomCodes)) ||
+                (flex && (
+                    (Array.isArray(flex.rooms) && flex.rooms.length) ||
+                    (Array.isArray(flex.unassignedBarcodes) && flex.unassignedBarcodes.length) ||
+                    objectHasValues(flex.assignments)
+                ))
+            ));
+        }
+
+        function cloneJsonValue(value) {
+            return JSON.parse(JSON.stringify(value));
+        }
+
+        // Validate and normalize without changing the active inspection. Only keys
+        // belonging to the current app-state schema are admitted from imported JSON.
+        function prepareIncomingInspectionData(rawData) {
+            if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) {
+                throw new Error('The file does not contain an inspection object.');
+            }
+
+            const incoming = cloneJsonValue(rawData);
+            const candidate = getCleanAppState();
+            Object.keys(candidate).forEach(key => {
+                if (Object.prototype.hasOwnProperty.call(incoming, key)) {
+                    candidate[key] = incoming[key];
+                }
+            });
+
+            const activeState = appState;
+            try {
+                appState = candidate;
+                normalizeAppState();
+                if (!hasUsableInspectionContent(appState)) {
+                    throw new Error('No usable inspection rooms, ECS codes, or tracking data were found.');
+                }
+                return cloneJsonValue(appState);
+            } finally {
+                appState = activeState;
+            }
+        }
+
+        function saveImportedStateOrThrow() {
+            const serialized = JSON.stringify(appState);
+            localStorage.setItem('roomInspectionApp', serialized);
+            if (localStorage.getItem('roomInspectionApp') !== serialized) {
+                throw new Error('The imported inspection could not be verified in device storage.');
+            }
+        }
+
+        function withImportTimeout(promise, timeoutMs, message) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(message)), timeoutMs))
+            ]);
+        }
+
+        async function ensureOfflineAppReady() {
+            if (!('serviceWorker' in navigator) || !('caches' in window) || !/^https?:$/.test(location.protocol)) {
+                throw new Error('Offline application storage is not supported in this browser context.');
+            }
+
+            const registration = await navigator.serviceWorker.register('./sw.js');
+            if (navigator.onLine !== false) {
+                try { await registration.update(); } catch(error) { /* verify the installed copy below */ }
+            }
+
+            const readyRegistration = await withImportTimeout(
+                navigator.serviceWorker.ready,
+                12000,
+                'Timed out while preparing the offline application.'
+            );
+            if (!readyRegistration.active) {
+                throw new Error('The offline worker is not active.');
+            }
+
+            const cacheNames = await caches.keys();
+            if (!cacheNames.includes(OFFLINE_APP_CACHE_NAME)) {
+                throw new Error('The offline application cache is not installed.');
+            }
+
+            const cache = await caches.open(OFFLINE_APP_CACHE_NAME);
+            const requiredUrls = ['./index.html', './new_test1506.html'];
+            const cachedResponses = await Promise.all(requiredUrls.map(url => cache.match(url)));
+            if (cachedResponses.some(response => !response)) {
+                throw new Error('The offline application cache is incomplete.');
+            }
+            return true;
+        }
+
+        async function replaceInspectionWithData(newData, source = 'import') {
+            const preparedData = prepareIncomingInspectionData(newData);
+            const previousState = cloneJsonValue(appState);
+            const previousStoredState = localStorage.getItem('roomInspectionApp');
+
+            if (source === 'json') hideFileUploadModal();
+
+            try {
+                await clearAndVerifyAllPhotos();
+            } catch(error) {
+                console.error('Required photo cleanup failed:', error);
+                showMessageModal(
+                    'Import Failed',
+                    'The previous inspection photos could not be completely removed.\n\n' +
+                    'The new inspection has not been loaded. Please try again.'
+                );
+                return { loaded: false, offlineReady: false, reason: 'photo-clear-failed' };
+            }
+
+            try {
+                // Explicitly remove the old state before installing the already
+                // validated replacement. Photos are guaranteed empty at this point.
+                appState = getCleanAppState();
+                localStorage.removeItem('roomInspectionApp');
+                appState = Object.assign(getCleanAppState(), cloneJsonValue(preparedData));
+                normalizeAppState();
+                saveImportedStateOrThrow();
+                refreshUIFromState();
+                renderDropdownEditor();
+                renderCommentDropdownEditor();
+            } catch(error) {
+                console.error('Inspection installation failed:', error);
+                appState = previousState;
+                if (previousStoredState === null) localStorage.removeItem('roomInspectionApp');
+                else localStorage.setItem('roomInspectionApp', previousStoredState);
+                refreshUIFromState();
+                renderDropdownEditor();
+                renderCommentDropdownEditor();
+                showMessageModal(
+                    'Import Failed',
+                    'The new inspection could not be stored on this device. The previous inspection state remains active.'
+                );
+                return { loaded: false, offlineReady: false, reason: 'install-failed' };
+            }
+
+            try {
+                await ensureOfflineAppReady();
+                showMessageModal(
+                    'Inspection Ready ✓',
+                    'New inspection data loaded successfully.\n\n' +
+                    'Previous inspection data and photos were cleared.\n\n' +
+                    'Offline copy is ready for site use.'
+                );
+                return { loaded: true, offlineReady: true };
+            } catch(error) {
+                console.warn('Offline readiness could not be confirmed:', error);
+                showMessageModal(
+                    'Inspection Loaded',
+                    'The new inspection was loaded successfully, but the offline copy could not be confirmed.\n\n' +
+                    'Stay connected and try again before going to site.'
+                );
+                return { loaded: true, offlineReady: false, reason: 'offline-not-ready' };
+            }
+        }
+
+        async function requestInspectionReplacement(newData, source = 'import') {
+            let preparedData;
+            try {
+                preparedData = prepareIncomingInspectionData(newData);
+            } catch(error) {
+                console.error('Incoming inspection validation failed:', error);
+                showMessageModal('Import Failed', 'The selected data is not a valid inspection.\n\n' + error.message);
+                return { loaded: false, offlineReady: false, reason: 'invalid-data' };
+            }
+
+            let existingPhotoCount;
+            try {
+                existingPhotoCount = (await getAllPhotos()).length;
+            } catch(error) {
+                console.error('Could not inspect existing photos:', error);
+                showMessageModal(
+                    'Import Failed',
+                    'The application could not safely inspect the photos already stored on this device. Nothing was changed.'
+                );
+                return { loaded: false, offlineReady: false, reason: 'photo-check-failed' };
+            }
+
+            if (hasExistingInspectionState(appState) || existingPhotoCount > 0) {
+                showMessageModal(
+                    'Replace Existing Inspection?',
+                    REPLACE_INSPECTION_WARNING,
+                    () => replaceInspectionWithData(preparedData, source),
+                    'Delete & Load New Inspection',
+                    'Cancel'
+                );
+                return { loaded: false, offlineReady: false, reason: 'awaiting-confirmation' };
+            }
+
+            return replaceInspectionWithData(preparedData, source);
+        }
+
         /** Called at page load — if URL hash is #d=... import the shared data */
 
         // ============================================================================
         //  SHARE / QR — restore state from a #share=... URL hash
         // ============================================================================
 
-        function tryLoadFromHash() {
+        async function tryLoadFromHash() {
             const hash = window.location.hash;
             if (!hash.startsWith('#d=')) return;
             const encoded = hash.slice(3);
             if (!encoded) return;
 
-            // Check whether this device already has an active inspection in progress
-            function hasActiveData() {
-                if (appState.rooms && appState.rooms.length > 0) return true;
-                if (appState.roomCodes && Object.keys(appState.roomCodes).length > 0) return true;
-                if (appState.assetTagz2 && Object.keys(appState.assetTagz2.roomCodes || {}).length > 0) return true;
-                if (appState.seStSvRooms && appState.seStSvRooms.length > 0) return true;
-                if (appState.flexibleInspections && (
-                    (appState.flexibleInspections.rooms || []).length > 0 ||
-                    (appState.flexibleInspections.unassignedBarcodes || []).length > 0
-                )) return true;
-                return false;
-            }
-
-            function doImport() {
-                // Always wipe existing photos before importing — orphaned photos from
-                // the previous inspection are unreachable after the codeId keys change,
-                // so clearing them prevents silent storage accumulation.
-                const importNow = () => {
-                    try {
-                        const data = decodeShareData(encoded);
-                        appState = Object.assign(getCleanAppState(), data);
-                        normalizeAppState();
-                        saveDataToStorage();
-                        history.replaceState(null, '', window.location.pathname + window.location.search);
-                        setTimeout(() => {
-                            refreshUIFromState();
-                            renderDropdownEditor();
-                            renderCommentDropdownEditor();
-                            showMessageModal('Data Imported', 'Shared inspection data loaded successfully!');
-                        }, 300);
-                    } catch (e) {
-                        console.warn('Share import failed:', e);
-                        history.replaceState(null, '', window.location.pathname + window.location.search);
-                    }
-                };
-
-                // Clear photos first (async), then run the import
-                if (typeof clearAllPhotos === 'function') {
-                    clearAllPhotos().then(importNow).catch(importNow);
-                } else {
-                    importNow();
-                }
-            }
-
-            // If there's already an active inspection on this device, ask before overwriting
-            if (hasActiveData()) {
-                // Strip the hash first so a page refresh doesn't re-trigger the import
+            let decodedData;
+            try {
+                decodedData = decodeShareData(encoded);
+                // Validate before showing any destructive confirmation.
+                prepareIncomingInspectionData(decodedData);
+            } catch(error) {
+                console.warn('Share import failed:', error);
                 history.replaceState(null, '', window.location.pathname + window.location.search);
-                showMessageModal(
-                    'Replace Active Inspection?',
-                    'All data will be wiped out. Continue?',
-                    doImport,
-                    'Yes, Delete & Import',
-                    'Cancel'
-                );
-            } else {
-                doImport();
+                showMessageModal('Import Failed', 'The QR/shared-link data is not a valid inspection. Nothing was changed.');
+                return;
             }
+
+            // Remove the payload before confirmation so Cancel/reload cannot re-run it.
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+            await requestInspectionReplacement(decodedData, 'qr');
         }
 
 
@@ -9848,7 +10059,7 @@ barcodeWrapper.appendChild(barcodeInput);
             }
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     // Sanitise before parsing:
                     // 1. Strip UTF-8 BOM (\uFEFF) — Chrome/Edge on Windows sometimes adds it
@@ -9866,19 +10077,16 @@ barcodeWrapper.appendChild(barcodeInput);
                     raw = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
 
                     const data = JSON.parse(raw);
-
-                    // Reset state before loading new data to ensure a clean slate
-                    appState = Object.assign(getCleanAppState(), data);
-                    normalizeAppState();
-                    saveDataToStorage();
-                    hideFileUploadModal();
-                    refreshUIFromState();
-                    renderDropdownEditor();
-                    renderCommentDropdownEditor();
-                    showMessageModal('Upload Successful', 'Data uploaded and loaded successfully!');
+                    // Validation and existing-content detection happen before the
+                    // shared replacement warning or any destructive operation.
+                    prepareIncomingInspectionData(data);
+                    await requestInspectionReplacement(data, 'json');
                 } catch (error) {
                     console.error('Upload failed:', error);
-                    showMessageModal('Upload Failed', 'Could not read the JSON file. Make sure it was exported from this app and has not been edited manually.\n\nError: ' + error.message);
+                    showMessageModal(
+                        'Upload Failed',
+                        'Could not read a valid inspection from this JSON file. The current inspection and photos were not changed.\n\nError: ' + error.message
+                    );
                 }
             };
             // Always read as text with explicit UTF-8 so Safari and Chrome agree
@@ -9937,10 +10145,13 @@ barcodeWrapper.appendChild(barcodeInput);
         document.getElementById('messageOk').addEventListener('click', hideMessageModal);
         document.getElementById('messageCancel').addEventListener('click', hideMessageModal);
         document.getElementById('messageConfirm').addEventListener('click', () => {
-            if (confirmationCallback) {
-                confirmationCallback();
-            }
+            const callback = confirmationCallback;
             hideMessageModal();
+            if (callback) {
+                Promise.resolve()
+                    .then(() => callback())
+                    .catch(error => console.error('Confirmation action failed:', error));
+            }
         });
 
         // ===== Flexible Tracking Logic =====
@@ -10954,19 +11165,24 @@ function renderFlexBarcodeRows() {
             }));
         }
 
-        // Wipe every photo from IndexedDB — called on Reset Application
+        // Wipe every photo from IndexedDB. This rejects on any transaction
+        // failure so replacement/reset callers can stop before changing state.
         async function clearAllPhotos() {
-            try {
-                await withPhotoDBRetry(db => new Promise((resolve, reject) => {
-                    const tx = db.transaction(STORE_NAME, 'readwrite');
-                    const req = tx.objectStore(STORE_NAME).clear();
-                    req.onerror = e => reject(e.target.error);
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = event => reject(tx.error || event.target.error);
-                    tx.onabort = event => reject(tx.error || event.target.error);
-                }));
-            } catch(e) {
-                console.warn('clearAllPhotos failed:', e);
+            await withPhotoDBRetry(db => new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const req = tx.objectStore(STORE_NAME).clear();
+                req.onerror = event => reject(event.target.error);
+                tx.oncomplete = () => resolve();
+                tx.onerror = event => reject(tx.error || event.target.error);
+                tx.onabort = event => reject(tx.error || event.target.error);
+            }));
+        }
+
+        async function clearAndVerifyAllPhotos() {
+            await clearAllPhotos();
+            const remainingPhotos = await getAllPhotos();
+            if (remainingPhotos.length !== 0) {
+                throw new Error(`${remainingPhotos.length} previous photo record(s) remain.`);
             }
         }
 
@@ -12066,8 +12282,7 @@ function renderFlexBarcodeRows() {
         // iOS/Android evicts the page while the phone is still offline.
         if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => registration.update())
+                ensureOfflineAppReady()
                     .catch(error => console.warn('Offline mode could not be prepared:', error));
             });
         }
