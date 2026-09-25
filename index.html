@@ -9770,7 +9770,7 @@ barcodeWrapper.appendChild(barcodeInput);
         //  UNIFIED INSPECTION REPLACEMENT — QR/shared link and manual JSON
         // ==========================================================================
 
-        const OFFLINE_APP_CACHE_NAME = 'live-form-shell-2026-09-03-r2';
+        const OFFLINE_APP_CACHE_NAME = 'live-form-shell-2026-09-25-r3';
         const REPLACE_INSPECTION_WARNING =
             'Loading new inspection data will permanently delete all current inspection data and all photos stored on this device.\n\n' +
             'Make sure you have exported anything you need before continuing.';
@@ -11360,11 +11360,38 @@ function renderFlexBarcodeRows() {
         const preparedPhotoInputs = new WeakSet();
         let pendingPhotoPickerInput = null;
         let photoPageHiddenAt = 0;
+        let photoSubsystemHeartbeatAt = Date.now();
+        let photoPickerRecoveryTimer = null;
+        let queuedPhotoRebuildTimer = null;
+        let photoControlsNeedRecovery = false;
         const PHOTO_CONTROL_STALE_AFTER_MS = 30000;
+        const PHOTO_PICKER_RETURN_GRACE_MS = 3000;
 
         function nextCameraInputId(prefix) {
             cameraInputIdSequence += 1;
             return `${prefix}-${cameraInputIdSequence}`;
+        }
+
+        // Recreate the browser-owned part of an existing file input without
+        // replacing the DOM node or its change handler. WebKit can preserve the
+        // element after a long suspension while discarding its native picker.
+        // Cycling the type during the user's click gives that same tap a fresh
+        // native control, so recovery does not require a page refresh.
+        function renewNativePhotoInput(fileInput) {
+            if (!fileInput) return;
+            const accept = fileInput.getAttribute('accept') || 'image/*';
+            const capture = fileInput.getAttribute('capture');
+            try {
+                fileInput.value = '';
+                fileInput.type = 'text';
+                fileInput.type = 'file';
+                fileInput.setAttribute('accept', accept);
+                if (capture !== null) fileInput.setAttribute('capture', capture);
+            } catch(error) {
+                // Clearing the value is still useful on browsers that refuse a
+                // type transition for a connected file input.
+                fileInput.value = '';
+            }
         }
 
         function preparePhotoInput(fileInput) {
@@ -11375,16 +11402,51 @@ function renderFlexBarcodeRows() {
             // same image twice (or retaking after a cancelled edit) may not emit
             // a change event, which looks exactly like a dead Camera button.
             fileInput.addEventListener('click', function() {
-                fileInput.value = '';
+                const now = Date.now();
+                const inactiveFor = now - photoSubsystemHeartbeatAt;
+                const pickerWasAlreadyPending = pendingPhotoPickerInput === fileInput;
+                photoSubsystemHeartbeatAt = now;
+
+                // This also covers iOS/PWA suspensions where visibilitychange,
+                // focus and pageshow were never delivered. The current trusted
+                // click renews the native picker before its default action.
+                if (pickerWasAlreadyPending || photoControlsNeedRecovery || inactiveFor >= PHOTO_CONTROL_STALE_AFTER_MS) {
+                    renewNativePhotoInput(fileInput);
+                    invalidatePhotoDB();
+                    photoControlsNeedRecovery = false;
+                } else {
+                    fileInput.value = '';
+                }
+
+                if (photoPickerRecoveryTimer) {
+                    clearTimeout(photoPickerRecoveryTimer);
+                    photoPickerRecoveryTimer = null;
+                }
                 pendingPhotoPickerInput = fileInput;
                 if (navigator.storage && typeof navigator.storage.persist === 'function') {
                     navigator.storage.persist().catch(() => {});
                 }
             }, true);
+
+            // Modern mobile browsers emit cancel when the native picker closes
+            // without a file. Older WebKit versions do not, so resumePhotoSubsystem
+            // also has a guarded timeout fallback.
+            fileInput.addEventListener('cancel', function() {
+                fileInput.value = '';
+                settlePhotoPicker(fileInput);
+            });
         }
 
         function settlePhotoPicker(fileInput) {
-            if (pendingPhotoPickerInput === fileInput) pendingPhotoPickerInput = null;
+            if (pendingPhotoPickerInput === fileInput) {
+                pendingPhotoPickerInput = null;
+                photoControlsNeedRecovery = false;
+            }
+            if (photoPickerRecoveryTimer) {
+                clearTimeout(photoPickerRecoveryTimer);
+                photoPickerRecoveryTimer = null;
+            }
+            photoSubsystemHeartbeatAt = Date.now();
         }
 
         function handlePhotoReadFailure(fileInput, error) {
@@ -12230,7 +12292,16 @@ function renderFlexBarcodeRows() {
         // Recreate those browser-owned objects on resume so the application can
         // recover without a network connection or a full page refresh.
         function rebuildPhotoControlsAfterResume() {
-            if (typeof _stampEditorState !== 'undefined' && _stampEditorState) return;
+            if (typeof _stampEditorState !== 'undefined' && _stampEditorState) {
+                photoControlsNeedRecovery = true;
+                return false;
+            }
+
+            pendingPhotoPickerInput = null;
+            if (photoPickerRecoveryTimer) {
+                clearTimeout(photoPickerRecoveryTimer);
+                photoPickerRecoveryTimer = null;
+            }
 
             invalidatePhotoDB();
 
@@ -12242,38 +12313,82 @@ function renderFlexBarcodeRows() {
 
             document.querySelectorAll('#flexBarcodeContainer .camera-row').forEach(row => row.remove());
             injectCameraButtonsIntoFlexRows();
+
+            photoControlsNeedRecovery = false;
+            photoSubsystemHeartbeatAt = Date.now();
+            return true;
+        }
+
+        function queuePhotoControlRebuild() {
+            photoControlsNeedRecovery = true;
+            if (queuedPhotoRebuildTimer) return;
+            queuedPhotoRebuildTimer = setTimeout(() => {
+                queuedPhotoRebuildTimer = null;
+                // A tap can follow the window focus event in the same turn.
+                // preparePhotoInput already renewed that control synchronously;
+                // never remove it while its native picker is opening.
+                if (pendingPhotoPickerInput && pendingPhotoPickerInput.isConnected) return;
+                rebuildPhotoControlsAfterResume();
+            }, 0);
+        }
+
+        function markPhotoPageInactive() {
+            if (!photoPageHiddenAt) photoPageHiddenAt = Date.now();
+            photoControlsNeedRecovery = true;
         }
 
         function resumePhotoSubsystem(force = false) {
-            const hiddenFor = photoPageHiddenAt ? Date.now() - photoPageHiddenAt : 0;
+            const now = Date.now();
+            const hiddenFor = photoPageHiddenAt ? now - photoPageHiddenAt : 0;
+            const heartbeatGap = now - photoSubsystemHeartbeatAt;
             photoPageHiddenAt = 0;
+            photoSubsystemHeartbeatAt = now;
 
             // Returning from the actual camera/file picker also resumes the page.
             // Keep that input connected until its change event has delivered the
-            // selected file; rebuilding it here would discard the new photo.
+            // selected file; rebuilding it immediately would discard the photo.
+            // If no change/cancel event arrives, rebuild after a short grace period.
+            // The old implementation only cleared the pending flag here, which
+            // left an overnight-suspended native picker attached to the button.
             if (pendingPhotoPickerInput && pendingPhotoPickerInput.isConnected) {
                 const pickerInput = pendingPhotoPickerInput;
-                setTimeout(() => settlePhotoPicker(pickerInput), 1500);
+                if (photoPickerRecoveryTimer) clearTimeout(photoPickerRecoveryTimer);
+                photoPickerRecoveryTimer = setTimeout(() => {
+                    photoPickerRecoveryTimer = null;
+                    if (pendingPhotoPickerInput !== pickerInput) return;
+                    pendingPhotoPickerInput = null;
+                    queuePhotoControlRebuild();
+                }, PHOTO_PICKER_RETURN_GRACE_MS);
                 return;
             }
             pendingPhotoPickerInput = null;
 
-            if (force || hiddenFor >= PHOTO_CONTROL_STALE_AFTER_MS) {
-                setTimeout(rebuildPhotoControlsAfterResume, 0);
+            if (force || photoControlsNeedRecovery || hiddenFor >= PHOTO_CONTROL_STALE_AFTER_MS || heartbeatGap >= PHOTO_CONTROL_STALE_AFTER_MS) {
+                queuePhotoControlRebuild();
+            } else {
+                photoControlsNeedRecovery = false;
             }
         }
 
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
-                photoPageHiddenAt = Date.now();
+                markPhotoPageInactive();
             } else {
                 resumePhotoSubsystem(false);
             }
         });
 
+        // Mobile Safari/PWAs do not consistently deliver every lifecycle event,
+        // so listen to the complementary signals as well. Calls are idempotent
+        // and coalesced by queuePhotoControlRebuild().
+        window.addEventListener('blur', markPhotoPageInactive);
+        window.addEventListener('focus', () => resumePhotoSubsystem(false));
+        window.addEventListener('pagehide', markPhotoPageInactive);
         window.addEventListener('pageshow', event => {
-            if (event.persisted) resumePhotoSubsystem(true);
+            resumePhotoSubsystem(!!event.persisted || !!document.wasDiscarded);
         });
+        document.addEventListener('freeze', markPhotoPageInactive);
+        document.addEventListener('resume', () => resumePhotoSubsystem(true));
 
 
         // ── PWA Service Worker ────────────────────────────────────────────
