@@ -1,0 +1,7 @@
+{
+  "name": "live-form-camera-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node camera-recovery.mjs" },
+  "devDependencies": { "playwright": "1.61.1" }
+}

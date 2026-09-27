@@ -9770,7 +9770,7 @@ barcodeWrapper.appendChild(barcodeInput);
         //  UNIFIED INSPECTION REPLACEMENT — QR/shared link and manual JSON
         // ==========================================================================
 
-        const OFFLINE_APP_CACHE_NAME = 'live-form-shell-2026-09-25-r3';
+        const OFFLINE_APP_CACHE_NAME = 'live-form-shell-2026-09-27-r4';
         const REPLACE_INSPECTION_WARNING =
             'Loading new inspection data will permanently delete all current inspection data and all photos stored on this device.\n\n' +
             'Make sure you have exported anything you need before continuing.';
@@ -11361,11 +11361,10 @@ function renderFlexBarcodeRows() {
         let pendingPhotoPickerInput = null;
         let photoPageHiddenAt = 0;
         let photoSubsystemHeartbeatAt = Date.now();
-        let photoPickerRecoveryTimer = null;
+        let photoControlRecoveryGeneration = 0;
         let queuedPhotoRebuildTimer = null;
         let photoControlsNeedRecovery = false;
         const PHOTO_CONTROL_STALE_AFTER_MS = 30000;
-        const PHOTO_PICKER_RETURN_GRACE_MS = 3000;
 
         function nextCameraInputId(prefix) {
             cameraInputIdSequence += 1;
@@ -11397,31 +11396,31 @@ function renderFlexBarcodeRows() {
         function preparePhotoInput(fileInput) {
             if (!fileInput || preparedPhotoInputs.has(fileInput)) return;
             preparedPhotoInputs.add(fileInput);
+            let recoveredGeneration = photoControlRecoveryGeneration;
+            let lastUsedAt = Date.now();
 
             // Always clear before opening the picker. Without this, choosing the
             // same image twice (or retaking after a cancelled edit) may not emit
             // a change event, which looks exactly like a dead Camera button.
             fileInput.addEventListener('click', function() {
                 const now = Date.now();
-                const inactiveFor = now - photoSubsystemHeartbeatAt;
+                const inactiveFor = now - lastUsedAt;
                 const pickerWasAlreadyPending = pendingPhotoPickerInput === fileInput;
                 photoSubsystemHeartbeatAt = now;
 
                 // This also covers iOS/PWA suspensions where visibilitychange,
                 // focus and pageshow were never delivered. The current trusted
                 // click renews the native picker before its default action.
-                if (pickerWasAlreadyPending || photoControlsNeedRecovery || inactiveFor >= PHOTO_CONTROL_STALE_AFTER_MS) {
+                // Recovery belongs to this input. Using another row must not
+                // make an untouched native control appear fresh.
+                if (pickerWasAlreadyPending || recoveredGeneration !== photoControlRecoveryGeneration || inactiveFor >= PHOTO_CONTROL_STALE_AFTER_MS) {
                     renewNativePhotoInput(fileInput);
                     invalidatePhotoDB();
-                    photoControlsNeedRecovery = false;
                 } else {
                     fileInput.value = '';
                 }
-
-                if (photoPickerRecoveryTimer) {
-                    clearTimeout(photoPickerRecoveryTimer);
-                    photoPickerRecoveryTimer = null;
-                }
+                recoveredGeneration = photoControlRecoveryGeneration;
+                lastUsedAt = now;
                 pendingPhotoPickerInput = fileInput;
                 if (navigator.storage && typeof navigator.storage.persist === 'function') {
                     navigator.storage.persist().catch(() => {});
@@ -11429,8 +11428,8 @@ function renderFlexBarcodeRows() {
             }, true);
 
             // Modern mobile browsers emit cancel when the native picker closes
-            // without a file. Older WebKit versions do not, so resumePhotoSubsystem
-            // also has a guarded timeout fallback.
+            // without a file. If an older browser omits cancel, the next tap
+            // renews the pending input without relying on a background timer.
             fileInput.addEventListener('cancel', function() {
                 fileInput.value = '';
                 settlePhotoPicker(fileInput);
@@ -11440,11 +11439,6 @@ function renderFlexBarcodeRows() {
         function settlePhotoPicker(fileInput) {
             if (pendingPhotoPickerInput === fileInput) {
                 pendingPhotoPickerInput = null;
-                photoControlsNeedRecovery = false;
-            }
-            if (photoPickerRecoveryTimer) {
-                clearTimeout(photoPickerRecoveryTimer);
-                photoPickerRecoveryTimer = null;
             }
             photoSubsystemHeartbeatAt = Date.now();
         }
@@ -11537,9 +11531,11 @@ function renderFlexBarcodeRows() {
 
             // ── File input change: open stamp editor before saving ──
             fileInput.addEventListener('change', async function() {
-                settlePhotoPicker(fileInput);
                 const file = fileInput.files[0];
-                if (!file) return;
+                if (!file) {
+                    settlePhotoPicker(fileInput);
+                    return;
+                }
 
                 // Read status + comment at capture time
                 const codeStatusOptions = (typeof getCodeStatusOptions === 'function') ? getCodeStatusOptions() : [];
@@ -11560,6 +11556,9 @@ function renderFlexBarcodeRows() {
 
                 const reader = new FileReader();
                 reader.onload = function(ev) {
+                    // Keep the input protected while FileReader is working;
+                    // resume events can arrive before the editor is visible.
+                    settlePhotoPicker(fileInput);
                     // Open stamp editor — let user review/edit before saving
                     openStampEditor(ev.target.result, uniqueCodeId, roomName, ecsCode,
                         statusText, commentText, extraFields,
@@ -12292,16 +12291,13 @@ function renderFlexBarcodeRows() {
         // Recreate those browser-owned objects on resume so the application can
         // recover without a network connection or a full page refresh.
         function rebuildPhotoControlsAfterResume() {
-            if (typeof _stampEditorState !== 'undefined' && _stampEditorState) {
+            if ((pendingPhotoPickerInput && pendingPhotoPickerInput.isConnected) ||
+                (typeof _stampEditorState !== 'undefined' && _stampEditorState)) {
                 photoControlsNeedRecovery = true;
                 return false;
             }
 
             pendingPhotoPickerInput = null;
-            if (photoPickerRecoveryTimer) {
-                clearTimeout(photoPickerRecoveryTimer);
-                photoPickerRecoveryTimer = null;
-            }
 
             invalidatePhotoDB();
 
@@ -12327,13 +12323,13 @@ function renderFlexBarcodeRows() {
                 // A tap can follow the window focus event in the same turn.
                 // preparePhotoInput already renewed that control synchronously;
                 // never remove it while its native picker is opening.
-                if (pendingPhotoPickerInput && pendingPhotoPickerInput.isConnected) return;
                 rebuildPhotoControlsAfterResume();
             }, 0);
         }
 
         function markPhotoPageInactive() {
             if (!photoPageHiddenAt) photoPageHiddenAt = Date.now();
+            photoControlRecoveryGeneration += 1;
             photoControlsNeedRecovery = true;
         }
 
@@ -12344,29 +12340,26 @@ function renderFlexBarcodeRows() {
             photoPageHiddenAt = 0;
             photoSubsystemHeartbeatAt = now;
 
+            if (force || hiddenFor >= PHOTO_CONTROL_STALE_AFTER_MS || heartbeatGap >= PHOTO_CONTROL_STALE_AFTER_MS) {
+                photoControlRecoveryGeneration += 1;
+                photoControlsNeedRecovery = true;
+            }
+            // Reopen storage even when an active picker/editor prevents a DOM
+            // rebuild, so its eventual Save does not reuse a suspended handle.
+            if (photoControlsNeedRecovery) invalidatePhotoDB();
+
             // Returning from the actual camera/file picker also resumes the page.
             // Keep that input connected until its change event has delivered the
-            // selected file; rebuilding it immediately would discard the photo.
-            // If no change/cancel event arrives, rebuild after a short grace period.
-            // The old implementation only cleared the pending flag here, which
-            // left an overnight-suspended native picker attached to the button.
+            // selected file. Elapsed time cannot distinguish a slow live picker
+            // from an abandoned one. If change/cancel never arrives, the next tap
+            // renews the input synchronously in preparePhotoInput instead.
             if (pendingPhotoPickerInput && pendingPhotoPickerInput.isConnected) {
-                const pickerInput = pendingPhotoPickerInput;
-                if (photoPickerRecoveryTimer) clearTimeout(photoPickerRecoveryTimer);
-                photoPickerRecoveryTimer = setTimeout(() => {
-                    photoPickerRecoveryTimer = null;
-                    if (pendingPhotoPickerInput !== pickerInput) return;
-                    pendingPhotoPickerInput = null;
-                    queuePhotoControlRebuild();
-                }, PHOTO_PICKER_RETURN_GRACE_MS);
                 return;
             }
             pendingPhotoPickerInput = null;
 
-            if (force || photoControlsNeedRecovery || hiddenFor >= PHOTO_CONTROL_STALE_AFTER_MS || heartbeatGap >= PHOTO_CONTROL_STALE_AFTER_MS) {
+            if (photoControlsNeedRecovery) {
                 queuePhotoControlRebuild();
-            } else {
-                photoControlsNeedRecovery = false;
             }
         }
 
