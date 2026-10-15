@@ -2,27 +2,32 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
 
 const { chromium, webkit } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = process.env.APP_ROOT || fileURLToPath(new URL('../', import.meta.url));
-const html = await readFile(resolve(root, 'index.html'), 'utf8');
+const entry = process.env.APP_ENTRY || 'testing/index.html';
+const appDirectory = dirname(entry);
+const html = await readFile(resolve(root, entry), 'utf8');
 const expectedCache = html.match(/const OFFLINE_APP_CACHE_NAME = '([^']+)'/)[1];
-assert.equal(html, await readFile(resolve(root, 'new_test1506.html'), 'utf8'));
-assert.ok((await readFile(resolve(root, 'sw.js'), 'utf8')).includes(`'${expectedCache}'`));
+assert.ok((await readFile(resolve(root, appDirectory, 'sw.js'), 'utf8')).includes(`'${expectedCache}'`));
+const shellFiles = appDirectory === 'testing'
+    ? ['./index.html', './production-core.js', './production-ui.js', './gate-config.js', './vendor/jszip.min.js']
+    : ['./index.html', './new_test1506.html'];
 const png = {
     name: 'camera.png', mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
 };
 const server = createServer(async (request, response) => {
     const pathname = new URL(request.url, 'http://localhost').pathname;
-    const file = pathname === '/' ? 'index.html' : pathname.slice(1);
-    if (!['index.html', 'new_test1506.html', 'sw.js'].includes(file)) {
+    const file = pathname.endsWith('/') ? pathname.slice(1) + 'index.html' : pathname.slice(1);
+    const allowed = file === entry || (appDirectory === 'testing' && file.startsWith('testing/') && /\.(html|js|css)$/.test(file) && !file.includes('..')) || ['index.html', 'new_test1506.html', 'sw.js'].includes(file);
+    if (!allowed) {
         response.writeHead(404).end();
         return;
     }
     try {
-        response.setHeader('Content-Type', file.endsWith('.js') ? 'application/javascript' : 'text/html');
+        response.setHeader('Content-Type', file.endsWith('.js') ? 'application/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html');
         response.setHeader('Cache-Control', 'no-store');
         response.end(await readFile(resolve(root, file)));
     } catch {
@@ -30,7 +35,7 @@ const server = createServer(async (request, response) => {
     }
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const url = `http://127.0.0.1:${server.address().port}/index.html`;
+const url = `http://127.0.0.1:${server.address().port}/${entry}`;
 
 async function setupRows(page) {
     await page.evaluate(() => {
@@ -202,11 +207,11 @@ try {
                 await page.route('https://**/*', route => route.abort());
                 await page.goto(url, { waitUntil: 'load' });
                 await page.evaluate(() => ensureOfflineAppReady());
-                assert.equal(await page.evaluate(async expected => {
+                assert.equal(await page.evaluate(async ({ expected, files }) => {
                     const cache = await caches.open(expected);
-                    const responses = await Promise.all(['./index.html', './new_test1506.html'].map(url => cache.match(url)));
-                    return (await Promise.all(responses.map(async response => response && (await response.text()).includes(expected)))).every(Boolean);
-                }, expectedCache), true);
+                    const responses = await Promise.all(files.map(url => cache.match(url)));
+                    return responses.every(Boolean);
+                }, { expected: expectedCache, files: shellFiles }), true);
                 if (name === 'Chromium') {
                     await setupRows(page);
                     await page.evaluate(() => saveDataToStorage());

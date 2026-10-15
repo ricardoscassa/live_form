@@ -1,0 +1,152 @@
+{
+  "build": "weekly-inspection-test-1",
+  "ranAt": "2026-10-15T09:09:44.826Z",
+  "passed": 28,
+  "failed": 0,
+  "limitations": [
+    "Desktop automation uses injected images. Native iOS/Android camera and OneDrive saving require device testing.",
+    "WebKit offline coverage verifies cached files. This host's headless WebKit cannot perform the simulated offline navigation; full offline reopen is checked in Chromium."
+  ],
+  "results": [
+    {
+      "browser": "Chromium",
+      "check": "prepare two pastes, enforce room/commodity scope, collapse and restore values",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "camera save, source metadata and relevant CSV export",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "manual add keeps current room and commodity and avoids duplicates",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "Search view shares fields and restores data",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "commodity field requirements apply while previous answers remain",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "grouped ZIP exports physical photo once in Building - Date and preserves links",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "same commodity keeps separate Pipework and Equipment field profiles",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "reset archives data/photos, preserves live storage, and recovery ZIP verifies",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "interrupted replacement recovers photo bytes on reopening",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "archive failure stops reset before any data or photo removal",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "failed replacement restores answers and photo bytes from the verified archive",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "JSON/share round trip retains scope, gates and manual provenance",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "mobile layout keeps controls within viewport",
+      "status": "passed"
+    },
+    {
+      "browser": "Chromium",
+      "check": "offline reopen, saved progress/photo and ZIP generation",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "prepare two pastes, enforce room/commodity scope, collapse and restore values",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "camera save, source metadata and relevant CSV export",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "manual add keeps current room and commodity and avoids duplicates",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "Search view shares fields and restores data",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "commodity field requirements apply while previous answers remain",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "grouped ZIP exports physical photo once in Building - Date and preserves links",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "same commodity keeps separate Pipework and Equipment field profiles",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "reset archives data/photos, preserves live storage, and recovery ZIP verifies",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "interrupted replacement recovers photo bytes on reopening",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "archive failure stops reset before any data or photo removal",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "failed replacement restores answers and photo bytes from the verified archive",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "JSON/share round trip retains scope, gates and manual provenance",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "mobile layout keeps controls within viewport",
+      "status": "passed"
+    },
+    {
+      "browser": "WebKit",
+      "check": "offline shell and local export dependencies verified",
+      "status": "passed"
+    }
+  ]
+}

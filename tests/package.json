@@ -2,6 +2,11 @@
   "name": "live-form-camera-tests",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node camera-recovery.mjs" },
+  "scripts": {
+    "test": "node --test weekly-core.mjs && node weekly-browser.mjs && node camera-recovery.mjs",
+    "test:core": "node --test weekly-core.mjs",
+    "test:weekly": "node weekly-browser.mjs",
+    "test:camera": "node camera-recovery.mjs"
+  },
   "devDependencies": { "playwright": "1.61.1" }
 }
